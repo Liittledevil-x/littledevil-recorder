@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pyarrow.parquet as pq
 import pytest
@@ -75,6 +75,27 @@ def test_write_depth_and_flush_roundtrip(writer, tmp_path):
     table = pq.read_table(path)
     assert table.num_rows == 1
     assert table.to_pylist()[0]["seq"] == 100
+
+
+def test_flush_removes_the_buffer_entry_so_it_does_not_leak_across_many_symbol_days(writer):
+    # Regression test: a real full-scale backfill run (200 symbols x 365
+    # days) OOM-killed a 2GB instance because _flush cleared each buffer's
+    # row list but never removed the (symbol, day) dict entry itself --
+    # the dict grew to one entry per unique symbol-day ever seen for the
+    # entire process lifetime, even though every entry was empty after
+    # its own flush.
+    for i in range(500):
+        ts = datetime(2026, 1, 1, tzinfo=UTC) + timedelta(days=i)
+        writer.write_trade(
+            f"SYMBOL{i}", trade_id=i, ts_exchange=ts, ts_received=ts,
+            price=1.0, qty=1.0, is_buyer_maker=False,
+        )
+        writer.flush_trades(f"SYMBOL{i}", ts.date())
+
+    assert len(writer._trades) == 0, (
+        f"expected the buffer dict to be empty after every entry was flushed, "
+        f"found {len(writer._trades)} leaked entries"
+    )
 
 
 def test_flush_all_writes_every_buffered_symbol_and_day(writer, tmp_path):

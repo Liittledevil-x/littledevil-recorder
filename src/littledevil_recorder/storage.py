@@ -136,5 +136,17 @@ class ParquetWriter:
             new_table = pa.concat_tables([existing, new_table])
 
         pq.write_table(new_table, out_path)
-        buf.rows.clear()
+        # Drop the now-empty buffer entry entirely rather than just
+        # clearing its row list -- the dict itself is never otherwise
+        # pruned, so a long-running writer (backfill's full 200-symbol x
+        # 365-day run, in particular) accumulates one entry per unique
+        # (symbol, day) ever seen for the rest of the process's life. This
+        # was a real memory leak: it OOM-killed a full-scale backfill run
+        # even after fixing the separate per-day materialization issue in
+        # backfill_job.py, since flushed-but-never-forgotten entries kept
+        # growing across all ~70k (symbol, day) combinations. A later
+        # write_trade for the same key just recreates the entry via
+        # setdefault, so this is safe for the live recorder's repeated
+        # same-day flushes too.
+        del buffers[key]
         return out_path
