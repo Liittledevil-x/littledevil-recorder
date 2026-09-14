@@ -74,21 +74,40 @@ async def top_200_symbols(client: httpx.AsyncClient, *, api_key: str | None = No
 async def fetch_daily_aggtrades(client: httpx.AsyncClient, symbol: str, day: date) -> list[dict] | None:
     """Returns None if this symbol/day isn't in the archive (delisted,
     not yet listed, or never had a Binance Spot USDT pair) -- this is an
-    expected, non-error outcome given the broad CoinGecko top-200 cast."""
+    expected, non-error outcome given the broad CoinGecko top-200 cast.
+
+    Materializes the whole day as a list -- fine for ad hoc use (tests,
+    the live-verification scripts), but backfill_job.py's real run uses
+    stream_daily_aggtrades below instead, since a liquid symbol's day is
+    1M+ rows and holding every one as a dict (plus the caller's own
+    buffered copy) is what OOM-killed the first full-scale run attempt.
+    """
+    rows = []
+    async for row in stream_daily_aggtrades(client, symbol, day):
+        if row is None:  # sentinel: symbol/day not in the archive at all
+            return None
+        rows.append(row)
+    return rows
+
+
+async def stream_daily_aggtrades(client: httpx.AsyncClient, symbol: str, day: date):
+    """Yields one row dict at a time instead of materializing the whole
+    day, so a caller can write-and-discard each row rather than holding
+    a symbol's entire day (1M+ rows for a liquid pair) in memory at once.
+    Yields a single `None` and returns if the symbol/day isn't archived."""
     url = f"{ARCHIVE_HOST}/data/spot/daily/aggTrades/{symbol}/{symbol}-aggTrades-{day.isoformat()}.zip"
     resp = await client.get(url)
     if resp.status_code == 404:
-        return None
+        yield None
+        return
     resp.raise_for_status()
 
-    rows = []
     with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
         name = zf.namelist()[0]
         with zf.open(name) as f:
             text = io.TextIOWrapper(f, encoding="utf-8")
             for row in csv.reader(text):
-                rows.append(dict(zip(AGGTRADE_COLUMNS, row, strict=True)))
-    return rows
+                yield dict(zip(AGGTRADE_COLUMNS, row, strict=True))
 
 
 async def fetch_daily_klines(

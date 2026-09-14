@@ -28,8 +28,8 @@ import httpx
 from littledevil_recorder.backfill import (
     archive_microseconds_to_datetime,
     compute_split_boundary,
-    fetch_daily_aggtrades,
     fetch_daily_klines,
+    stream_daily_aggtrades,
     top_200_symbols,
     which_block,
 )
@@ -39,7 +39,13 @@ from littledevil_recorder.storage import ParquetWriter
 logger = logging.getLogger(__name__)
 
 BACKFILL_MONTHS = 12
-CONCURRENT_SYMBOL_LIMIT = 5
+# Streaming (see backfill_symbol below) removed the worst of the per-symbol
+# memory cost, but each concurrent symbol still holds one day's compressed
+# zip body plus the writer's buffered rows for that day at once -- 5
+# concurrent liquid symbols was enough to OOM-kill a 2GB instance on the
+# first full-scale run. 3 is a safer default; override via
+# LITTLEDEVIL_BACKFILL_CONCURRENCY for a larger box.
+CONCURRENT_SYMBOL_LIMIT = int(os.getenv("LITTLEDEVIL_BACKFILL_CONCURRENCY", "3"))
 
 
 async def log_split_boundary(conn, *, dataset_id: str, boundary) -> None:
@@ -87,12 +93,18 @@ async def backfill_symbol(
     days_missing = 0
 
     for day in days:
-        trades = await fetch_daily_aggtrades(client, symbol, day)
-        if trades is None:
-            days_missing += 1
-            continue
-        days_with_data += 1
-        for row in trades:
+        had_any_rows = False
+        # Streamed, not materialized as a list -- a liquid symbol's day is
+        # 1M+ rows, and holding every row as a dict (on top of the writer's
+        # own buffered copy) is what OOM-killed the first full-scale run
+        # attempt on a 2GB instance. Each row is written and released
+        # immediately; only one buffered copy (the writer's own) exists at
+        # any moment, and that is flushed to disk at the end of this day
+        # before the next day's rows start arriving.
+        async for row in stream_daily_aggtrades(client, symbol, day):
+            if row is None:  # sentinel: this symbol/day isn't archived
+                break
+            had_any_rows = True
             ts = archive_microseconds_to_datetime(row["transact_time"])
             writer.write_trade(
                 symbol,
@@ -103,6 +115,12 @@ async def backfill_symbol(
                 qty=float(row["quantity"]),
                 is_buyer_maker=row["is_buyer_maker"] == "True",
             )
+
+        if not had_any_rows:
+            days_missing += 1
+            continue
+
+        days_with_data += 1
         writer.flush_trades(symbol, day)
 
         klines = await fetch_daily_klines(client, symbol, day)
@@ -110,7 +128,7 @@ async def backfill_symbol(
         # aggTrades is Trunk work per architecture-review.md §7) -- fetched
         # here only to confirm archive coverage matches for both series;
         # not written to disk.
-        if klines is None and trades is not None:
+        if klines is None:
             logger.warning("%s %s: aggTrades present but klines missing", symbol, day)
 
     return days_with_data, days_missing
