@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+import queue
 import zipfile
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -91,57 +92,83 @@ async def fetch_daily_aggtrades(client: httpx.AsyncClient, symbol: str, day: dat
     return rows
 
 
-def _parse_aggtrades_zip(content: bytes) -> list[dict]:
-    """Synchronous, CPU-bound: unzip + parse a full day's CSV into row
-    dicts. Deliberately run off the event loop (see stream_daily_aggtrades)
-    -- for a liquid symbol like BTCUSDT this is 1M+ rows, and running it
-    inline inside an `async def` blocks the whole event loop for the
-    entire parse, since a plain `for` loop with no `await` inside it never
-    yields control back. Under real concurrent load (multiple symbols via
-    asyncio.gather) this meant one large symbol's parse could stall every
-    other concurrent symbol's task indefinitely, while the stalled task's
-    own response body and half-built buffer sat in memory the whole time
-    -- diagnosed via py-spy showing the process legitimately idle in
-    `select` (no CPU-bound frame visible) while one specific symbol's log
-    line count never advanced past its first day, for 15+ minutes, on the
-    first attempt to fix this without moving parsing off the event loop."""
-    rows = []
+_PARSE_BATCH_SIZE = 5000  # rows per queue item -- see stream_daily_aggtrades's docstring
+_PARSE_QUEUE_MAXSIZE = 4  # bounds in-flight batches: ~4 * 5000 rows, not the whole day
+_PARSE_SENTINEL = object()
+
+
+def _parse_aggtrades_zip_into_queue(content: bytes, out_queue: "queue.Queue") -> None:
+    """Synchronous, CPU-bound: unzip + parse a day's CSV, pushing batches
+    of _PARSE_BATCH_SIZE row dicts onto a bounded queue as they're parsed
+    -- never materializing the whole day as one list. Deliberately run in
+    a thread (see stream_daily_aggtrades) so it never blocks the event
+    loop.
+
+    Two things had to be fixed together here, not separately:
+    - A `list[dict]`-per-day version (fixed the event-loop-blocking
+      problem, see stream_daily_aggtrades's git history) still peaked at
+      several hundred MB for a single busy BTCUSDT day (500k-1M+ rows),
+      and a short run of such days back-to-back was enough to OOM-kill a
+      2GB instance even with no cross-day accumulation. Measured locally:
+      RSS tracked each day's own row count almost exactly (517k rows ->
+      433MB, 966k rows -> 772MB) -- proof this wasn't a leak, just one
+      day's data being too large to hold as one list on this budget.
+    - A first attempt at fixing that (yielding one row at a time through
+      a queue, one `run_in_executor` call per row) fixed memory
+      completely (peak RSS dropped to under 55MB across the same 6 days)
+      but was ~8x slower in wall-clock time -- the per-row executor
+      dispatch overhead dominated over actual parsing. For a 200-symbol
+      x 365-day run that difference is the gap between finishing in
+      well under a day and not finishing within a week.
+    Batching the queue transfers keeps memory bounded (a few thousand
+    rows in flight, not a million) while cutting the executor-dispatch
+    count by _PARSE_BATCH_SIZE, which is what actually makes this fast
+    enough to run at full scale."""
+    batch: list[dict] = []
     with zipfile.ZipFile(io.BytesIO(content)) as zf:
         name = zf.namelist()[0]
         with zf.open(name) as f:
             text = io.TextIOWrapper(f, encoding="utf-8")
             for row in csv.reader(text):
-                rows.append(dict(zip(AGGTRADE_COLUMNS, row, strict=True)))
-    return rows
+                batch.append(dict(zip(AGGTRADE_COLUMNS, row, strict=True)))
+                if len(batch) >= _PARSE_BATCH_SIZE:
+                    out_queue.put(batch)
+                    batch = []
+    if batch:
+        out_queue.put(batch)
+    out_queue.put(_PARSE_SENTINEL)
 
 
 async def stream_daily_aggtrades(client: httpx.AsyncClient, symbol: str, day: date):
-    """Yields one row dict at a time instead of materializing the whole
-    day, so a caller can write-and-discard each row rather than holding
-    a symbol's entire day (1M+ rows for a liquid pair) in memory at once.
-    Yields a single `None` and returns if the symbol/day isn't archived.
-
-    The actual CSV parse runs in a thread executor (see
-    _parse_aggtrades_zip) so it never blocks the event loop -- this still
-    materializes one day's rows as a list inside that thread (simpler and
-    fast enough there; the multi-GB-scale problem this whole module exists
-    to avoid was the *caller* holding every symbol's data at once across
-    the full ~12-month run, not one thread transiently holding one day's
-    worth while parsing it), but yields them to the caller one at a time
-    so the caller's own memory footprint stays exactly what it was
-    designed to be.
-    """
+    """Yields one row dict at a time to the caller (the public per-row
+    contract every existing caller relies on is unchanged), while the
+    actual producer/consumer hand-off between the parser thread and this
+    async generator moves in batches of _PARSE_BATCH_SIZE for throughput
+    -- see _parse_aggtrades_zip_into_queue's docstring for why both the
+    batching and the queue (instead of a plain per-day list) are needed
+    together. Yields a single `None` and returns if the symbol/day isn't
+    archived."""
     url = f"{ARCHIVE_HOST}/data/spot/daily/aggTrades/{symbol}/{symbol}-aggTrades-{day.isoformat()}.zip"
     resp = await client.get(url)
     if resp.status_code == 404:
         yield None
         return
     resp.raise_for_status()
+    content = resp.content
+    del resp  # drop the Response object (and any internal buffers) promptly, not at generator-frame teardown
 
     loop = asyncio.get_running_loop()
-    rows = await loop.run_in_executor(None, _parse_aggtrades_zip, resp.content)
-    for row in rows:
-        yield row
+    batch_queue: queue.Queue = queue.Queue(maxsize=_PARSE_QUEUE_MAXSIZE)
+    parse_future = loop.run_in_executor(None, _parse_aggtrades_zip_into_queue, content, batch_queue)
+
+    while True:
+        batch = await loop.run_in_executor(None, batch_queue.get)
+        if batch is _PARSE_SENTINEL:
+            break
+        for row in batch:
+            yield row
+
+    await parse_future  # surface any exception raised inside the parser thread
 
 
 async def fetch_daily_klines(
