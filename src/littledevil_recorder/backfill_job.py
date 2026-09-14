@@ -163,19 +163,25 @@ async def run_backfill(
 
             semaphore = asyncio.Semaphore(CONCURRENT_SYMBOL_LIMIT)
 
-            async def bounded(symbol: str) -> tuple[str, int, int]:
+            async def bounded(symbol: str) -> tuple[str, int, int] | None:
                 async with semaphore:
-                    found, missing = await backfill_symbol(client, writer, symbol, days)
+                    try:
+                        found, missing = await backfill_symbol(client, writer, symbol, days)
+                    except Exception:
+                        # Logged immediately, not batched until every one of
+                        # ~200 symbols finishes (asyncio.gather's
+                        # return_exceptions=True previously swallowed this
+                        # silently for the run's entire multi-hour duration
+                        # -- a PermissionError on the data directory was
+                        # invisible this way across three separate OOM
+                        # debugging attempts, since the real failure was
+                        # never logged until the very end that never came).
+                        logger.exception("symbol backfill failed: %s", symbol)
+                        return None
+                    logger.info("%s: %d days with data, %d days missing", symbol, found, missing)
                     return symbol, found, missing
 
-            results = await asyncio.gather(*(bounded(s) for s in symbols), return_exceptions=True)
-
-        for result in results:
-            if isinstance(result, Exception):
-                logger.warning("symbol backfill failed: %s", result)
-                continue
-            symbol, found, missing = result
-            logger.info("%s: %d days with data, %d days missing", symbol, found, missing)
+            await asyncio.gather(*(bounded(s) for s in symbols))
     finally:
         await conn.close()
 
