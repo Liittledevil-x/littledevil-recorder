@@ -11,6 +11,7 @@ was confirmed with Omar rather than guessed (see dev-journal.md).
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 import zipfile
@@ -90,11 +91,46 @@ async def fetch_daily_aggtrades(client: httpx.AsyncClient, symbol: str, day: dat
     return rows
 
 
+def _parse_aggtrades_zip(content: bytes) -> list[dict]:
+    """Synchronous, CPU-bound: unzip + parse a full day's CSV into row
+    dicts. Deliberately run off the event loop (see stream_daily_aggtrades)
+    -- for a liquid symbol like BTCUSDT this is 1M+ rows, and running it
+    inline inside an `async def` blocks the whole event loop for the
+    entire parse, since a plain `for` loop with no `await` inside it never
+    yields control back. Under real concurrent load (multiple symbols via
+    asyncio.gather) this meant one large symbol's parse could stall every
+    other concurrent symbol's task indefinitely, while the stalled task's
+    own response body and half-built buffer sat in memory the whole time
+    -- diagnosed via py-spy showing the process legitimately idle in
+    `select` (no CPU-bound frame visible) while one specific symbol's log
+    line count never advanced past its first day, for 15+ minutes, on the
+    first attempt to fix this without moving parsing off the event loop."""
+    rows = []
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        name = zf.namelist()[0]
+        with zf.open(name) as f:
+            text = io.TextIOWrapper(f, encoding="utf-8")
+            for row in csv.reader(text):
+                rows.append(dict(zip(AGGTRADE_COLUMNS, row, strict=True)))
+    return rows
+
+
 async def stream_daily_aggtrades(client: httpx.AsyncClient, symbol: str, day: date):
     """Yields one row dict at a time instead of materializing the whole
     day, so a caller can write-and-discard each row rather than holding
     a symbol's entire day (1M+ rows for a liquid pair) in memory at once.
-    Yields a single `None` and returns if the symbol/day isn't archived."""
+    Yields a single `None` and returns if the symbol/day isn't archived.
+
+    The actual CSV parse runs in a thread executor (see
+    _parse_aggtrades_zip) so it never blocks the event loop -- this still
+    materializes one day's rows as a list inside that thread (simpler and
+    fast enough there; the multi-GB-scale problem this whole module exists
+    to avoid was the *caller* holding every symbol's data at once across
+    the full ~12-month run, not one thread transiently holding one day's
+    worth while parsing it), but yields them to the caller one at a time
+    so the caller's own memory footprint stays exactly what it was
+    designed to be.
+    """
     url = f"{ARCHIVE_HOST}/data/spot/daily/aggTrades/{symbol}/{symbol}-aggTrades-{day.isoformat()}.zip"
     resp = await client.get(url)
     if resp.status_code == 404:
@@ -102,12 +138,10 @@ async def stream_daily_aggtrades(client: httpx.AsyncClient, symbol: str, day: da
         return
     resp.raise_for_status()
 
-    with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-        name = zf.namelist()[0]
-        with zf.open(name) as f:
-            text = io.TextIOWrapper(f, encoding="utf-8")
-            for row in csv.reader(text):
-                yield dict(zip(AGGTRADE_COLUMNS, row, strict=True))
+    loop = asyncio.get_running_loop()
+    rows = await loop.run_in_executor(None, _parse_aggtrades_zip, resp.content)
+    for row in rows:
+        yield row
 
 
 async def fetch_daily_klines(
