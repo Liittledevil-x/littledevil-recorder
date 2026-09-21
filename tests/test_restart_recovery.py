@@ -1,7 +1,28 @@
 from datetime import UTC, datetime
 
-from littledevil_recorder.restart_recovery import last_recorded_trade
-from littledevil_recorder.storage import ParquetWriter
+from littledevil_recorder.restart_recovery import backfill_missed_trades, last_recorded_trade
+from littledevil_recorder.storage import ParquetWriter, iter_parquet_paths
+
+
+class _RecoveryResponse:
+    def __init__(self, rows: list[dict]) -> None:
+        self._rows = rows
+
+    def raise_for_status(self) -> None:
+        pass
+
+    def json(self) -> list[dict]:
+        return self._rows
+
+
+class _RecoveryClient:
+    def __init__(self, rows: list[dict]) -> None:
+        self._rows = rows
+        self.from_ids: list[int] = []
+
+    async def get(self, _url: str, *, params: dict) -> _RecoveryResponse:
+        self.from_ids.append(params["fromId"])
+        return _RecoveryResponse(self._rows)
 
 
 def test_last_recorded_trade_returns_none_when_no_file_exists(tmp_path):
@@ -35,3 +56,33 @@ def test_last_recorded_trade_handles_empty_file(tmp_path):
     assert writer.flush_trades("BTCUSDT", day.date()) is None
     plan = last_recorded_trade(tmp_path, "BTCUSDT", day.date())
     assert plan.last_known_trade_id is None
+
+
+async def test_executing_the_same_recovery_range_twice_persists_each_trade_id_once(tmp_path):
+    # A process may crash after a REST recovery response has been written but
+    # before it can advance any in-memory recovery state. The next process
+    # is allowed to repeat that exact fromId range; storage, not a fragile
+    # assumption about request execution, enforces the durable invariant.
+    base_ms = int(datetime(2026, 9, 19, tzinfo=UTC).timestamp() * 1000)
+    rows = [
+        {"a": 10, "T": base_ms, "p": "100.0", "q": "1.0", "m": False},
+        {"a": 11, "T": base_ms + 1_000, "p": "101.0", "q": "2.0", "m": True},
+        {"a": 12, "T": base_ms + 2_000, "p": "102.0", "q": "3.0", "m": False},
+    ]
+    first = ParquetWriter(tmp_path)
+    first_client = _RecoveryClient(rows)
+    assert await backfill_missed_trades(first_client, first, "BTCUSDT", from_trade_id=9) == 3
+    first.flush_all()
+
+    retry = ParquetWriter(tmp_path)
+    retry_client = _RecoveryClient(rows)
+    assert await backfill_missed_trades(retry_client, retry, "BTCUSDT", from_trade_id=9) == 3
+    retry.flush_all()
+
+    assert first_client.from_ids == [10]
+    assert retry_client.from_ids == [10]
+    import pyarrow.parquet as pq
+
+    rows = [row for path in iter_parquet_paths(tmp_path, "trades", "BTCUSDT", datetime(2026, 9, 19).date())
+            for row in pq.read_table(path).to_pylist()]
+    assert sorted(row["trade_id"] for row in rows) == [10, 11, 12]

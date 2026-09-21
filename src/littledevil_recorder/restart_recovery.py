@@ -20,7 +20,7 @@ from pathlib import Path
 import httpx
 import pyarrow.parquet as pq
 
-from littledevil_recorder.storage import ParquetWriter
+from littledevil_recorder.storage import ParquetWriter, iter_parquet_paths
 
 REST_HOST = "https://data-api.binance.vision"
 MAX_AGGTRADES_PER_REQUEST = 1000
@@ -35,22 +35,34 @@ class RecoveryPlan:
 
 def last_recorded_trade(data_root: Path, symbol: str, day) -> RecoveryPlan:
     """Reads the most recent trade this process (or a prior one) already
-    wrote for `symbol` on `day`, so recovery knows where to resume from."""
-    path = data_root / "trades" / symbol / f"{day.isoformat()}.parquet"
-    if not path.exists():
-        return RecoveryPlan(symbol=symbol, last_known_trade_id=None, last_known_ts=None)
+    wrote for `symbol` on `day`, so recovery knows where to resume from.
 
-    table = pq.read_table(path, columns=["trade_id", "ts_exchange"])
-    if table.num_rows == 0:
-        return RecoveryPlan(symbol=symbol, last_known_trade_id=None, last_known_ts=None)
+    The day's persisted trade file can be large, so find the maximum in
+    bounded Parquet batches rather than materializing its columns at once.
+    """
+    max_trade_id: int | None = None
+    max_trade_ts: datetime | None = None
+    for path in iter_parquet_paths(data_root, "trades", symbol, day):
+        parquet = pq.ParquetFile(path)
+        try:
+            for batch in parquet.iter_batches(columns=["trade_id", "ts_exchange"]):
+                for trade_id, timestamp in zip(
+                    batch.column("trade_id").to_pylist(),
+                    batch.column("ts_exchange").to_pylist(),
+                    strict=True,
+                ):
+                    if max_trade_id is None or trade_id > max_trade_id:
+                        max_trade_id = trade_id
+                        max_trade_ts = timestamp
+        finally:
+            parquet.close()
 
-    trade_ids = table.column("trade_id").to_pylist()
-    timestamps = table.column("ts_exchange").to_pylist()
-    max_idx = max(range(len(trade_ids)), key=lambda i: trade_ids[i])
+    if max_trade_id is None:
+        return RecoveryPlan(symbol=symbol, last_known_trade_id=None, last_known_ts=None)
     return RecoveryPlan(
         symbol=symbol,
-        last_known_trade_id=trade_ids[max_idx],
-        last_known_ts=timestamps[max_idx],
+        last_known_trade_id=max_trade_id,
+        last_known_ts=max_trade_ts,
     )
 
 

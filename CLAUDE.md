@@ -16,6 +16,6 @@ Primary references: docs/orchestration-and-platform.md §2; docs/architecture-re
 - `README.md`'s ~37x/year aspiration is never an input to any agent, prompt, config, or task — see the workspace-root `CLAUDE.md`'s non-negotiables for the full statement of this rule.
 - The Vercel↔AWS boundary is never trusted by network origin, only by the minted token (docs/repo-structure.md §5).
 - No paid data sources in v1.
-- Append to dev-journal.md (this repo's local one) after every change or decision — see the workspace-root `CLAUDE.md` for format.
+- Update the workspace-root `DEV_JOURNAL.md` before every final response — never create or use a repo-local journal.
 
 If a task seems to need something not covered by any of the above, that's a signal to stop and ask, not to invent it.

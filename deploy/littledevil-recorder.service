@@ -1,0 +1,35 @@
+[Unit]
+Description=littledevil-recorder Data Floor service
+# StartLimitIntervalSec/StartLimitBurst: give up and enter a failed state
+# after 5 restarts within 10 minutes, instead of restarting forever. Added
+# after the 2026-09-16 OOM incident, where the unit restarted 474 times over
+# many hours while `systemctl status` kept reporting "active (running)" --
+# a live, healthy-looking status every few minutes is much harder to notice
+# and alarm on than a unit that goes to "failed" and stays there.
+StartLimitIntervalSec=600
+StartLimitBurst=5
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/littledevil-recorder.env
+ExecStart=/opt/littledevil/venv/bin/littledevil-recorder
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# MemoryMax: kills only this process on a future memory bug, comfortably
+# under the box's total RAM, so a recorder bug can no longer take Postgres
+# down with it (Postgres was OOM-killed at least twice during the
+# 2026-09-16 incident because the box had zero swap and no per-service
+# memory ceiling). Tune to the actual instance size at deploy time; this
+# 16 GiB m7g.xlarge: reserve at least 8 GiB for PostgreSQL, the OS, and
+# filesystem cache. This remains a hard recorder blast-radius cap, not a
+# substitute for bounded writes or flush-failure isolation.
+MemoryMax=8G
+MemoryAccounting=true
+
+[Install]
+WantedBy=multi-user.target

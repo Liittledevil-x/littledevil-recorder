@@ -18,6 +18,7 @@ test = ["pytest>=8.0", "pytest-asyncio>=0.24"]
 [project.scripts]
 littledevil-recorder = "littledevil_recorder.main:main"
 littledevil-backfill = "littledevil_recorder.backfill_job:main"
+littledevil-historical-corpus = "littledevil_recorder.historical_corpus:main"
 
 [build-system]
 requires = ["hatchling>=1.27"]

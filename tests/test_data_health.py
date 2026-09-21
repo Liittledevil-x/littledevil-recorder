@@ -27,7 +27,8 @@ async def test_new_channel_starts_ok():
     )
     tracker = DataHealthTracker(conn)
     try:
-        await tracker.record_message("test_channel_ok")
+        tracker.record_message("test_channel_ok")
+        assert await tracker.flush()
         row = await _fetch(conn, "test_channel_ok")
         assert row["status"] == "ok"
         assert row["gap_started_at"] is None
@@ -43,19 +44,22 @@ async def test_sweep_marks_stale_then_suspended_and_recovery_clears_gap():
     )
     tracker = DataHealthTracker(conn)
     try:
-        await tracker.record_message("test_channel_gap")
+        tracker.record_message("test_channel_gap")
+        assert await tracker.flush()
 
         # Force staleness by backdating the in-memory state directly,
         # rather than sleeping 30+ real seconds in a test.
         state = tracker._channels["test_channel_gap"]
         state.last_message_at = datetime.now(UTC) - timedelta(seconds=200)
 
-        await tracker.sweep()
+        tracker.sweep()
+        assert await tracker.flush()
         row = await _fetch(conn, "test_channel_gap")
         assert row["status"] == "suspended"
         assert row["gap_started_at"] is not None
 
-        await tracker.record_message("test_channel_gap")
+        tracker.record_message("test_channel_gap")
+        assert await tracker.flush()
         row = await _fetch(conn, "test_channel_gap")
         assert row["status"] == "ok"
         assert row["gap_started_at"] is None
