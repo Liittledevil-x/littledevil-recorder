@@ -25,7 +25,7 @@ from littledevil_recorder.local_manifest import quarantine_file
 logger = logging.getLogger(__name__)
 
 # The two files confirmed corrupted during the 2026-09-16 OOM crash-loop
-# incident (see dev-journal.md): crash-mid-write left a 4-byte depth file
+# incident (see the workspace-root DEV_JOURNAL.md): crash-mid-write left a 4-byte depth file
 # for BTCUSDT and an invalid-magic-bytes depth file for ETHUSDT.
 KNOWN_CORRUPT = [
     ("depth", "BTCUSDT", "2026-09-15", "4-byte file, crash-mid-write during 2026-09-16 OOM incident"),

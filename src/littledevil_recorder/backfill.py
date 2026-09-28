@@ -6,7 +6,7 @@ time-blocked dev/calibration/holdout split with the boundary logged.
 
 Split ratio (70/15/15 dev/calibration/holdout) is not specified anywhere
 in the docs -- every doc says "time-blocked" but none gives a ratio. This
-was confirmed with Omar rather than guessed (see dev-journal.md).
+was confirmed with Omar rather than guessed (see the workspace-root DEV_JOURNAL.md).
 """
 
 from __future__ import annotations

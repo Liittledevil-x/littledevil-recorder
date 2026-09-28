@@ -32,6 +32,22 @@ from littledevil_recorder.subscription_manager import SubscriptionManager
 
 logger = logging.getLogger(__name__)
 
+
+def parse_basis_response(symbol: str, data: dict, ts_received: datetime) -> dict:
+    """Parse a single basis data point from GET /futures/data/basis response."""
+    ts_exchange = datetime.fromtimestamp(int(data["timestamp"]) / 1000, tz=UTC)
+    return {
+        "symbol": symbol,
+        "ts_exchange": ts_exchange,
+        "ts_received": ts_received,
+        "index_price": float(data["indexPrice"]),
+        "futures_price": float(data["futuresPrice"]),
+        "basis_rate": float(data["basisRate"]),
+        "basis": float(data["basis"]),
+        "annualized_basis_rate": float(data["annualizedBasisRate"]),
+        "contract_type": data["contractType"],
+    }
+
 BASIS_URL = "https://fapi.binance.com/futures/data/basis"
 DEFAULT_POLL_INTERVAL_SECONDS = 60.0
 DEFAULT_PERIOD = "1h"  # 1-hour basis snapshots

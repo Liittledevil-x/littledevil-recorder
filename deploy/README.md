@@ -18,7 +18,7 @@ sudo systemctl restart littledevil-recorder
 
 Restarting the live service is exactly the kind of production change this
 repo's automated tooling is not permitted to make on its own -- do this
-deliberately, once the storage.py fix (see dev-journal.md,
+deliberately, once the storage.py fix (see the workspace-root DEV_JOURNAL.md,
 2026-09-17 entry) has been deployed and reviewed, not as a reflexive "apply
 the new unit file" step.
 

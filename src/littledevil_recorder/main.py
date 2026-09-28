@@ -33,6 +33,7 @@ from littledevil_recorder.local_manifest import (
 )
 from littledevil_recorder.positioning_basis import run_basis_poller
 from littledevil_recorder.positioning_poller import run_positioning_poller
+from littledevil_recorder.recovery_orchestration import orchestrate_recovery_from_gaps
 from littledevil_recorder.restart_recovery import backfill_missed_trades, last_recorded_trade
 from littledevil_recorder.storage import (
     CompactionError,
@@ -221,6 +222,17 @@ async def recover_and_run(
         while not stop_event.is_set():
             await asyncio.sleep(DATA_HEALTH_SWEEP_INTERVAL_SECONDS)
             health.sweep()
+
+            # Attempt gap recovery from detected Data Health gaps
+            recovery_results = await orchestrate_recovery_from_gaps(health, writer, conn, client)
+            if recovery_results:
+                for result in recovery_results:
+                    if result.errors:
+                        logger.warning(
+                            "recovery for %s/%s had errors: %s",
+                            result.channel, result.symbol, result.errors
+                        )
+
             if not await health.flush():
                 logger.error(
                     "data_health flush failed (%d total); pending=%d error=%s",
