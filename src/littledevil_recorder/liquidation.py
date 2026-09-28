@@ -1,51 +1,35 @@
 """Public, market-wide USDⓈ-M liquidation order ingestion via `!forceOrder@arr`.
 
-Verified against the current official docs (developers.binance.com, USDⓈ-M
-futures websocket market streams): `!forceOrder@arr` is the all-market
-liquidation order stream, public and unauthenticated, distinct in every way
-from `GET /fapi/v1/forceOrders` (a *private*, API-key-authenticated endpoint
-that returns only the caller's own liquidation history). This module never
-calls, and must never be made to call, that private endpoint -- there is no
-legitimate way to substitute one's own trade history for market-wide data,
-and doing so would silently misrepresent a single account's liquidations as
-the market's.
+Verified against current official docs (developers.binance.com, Sept 2026):
+`!forceOrder@arr` is the all-market liquidation order stream, public and
+unauthenticated, distinct from `GET /fapi/v1/forceOrders` (private,
+authenticated, user-only liquidation history -- never called here).
 
-Per the official spec, the stream is explicitly *sampled*, not a complete
-liquidation log: "for each symbol, only the latest one liquidation order
-within 1000ms will be pushed as the snapshot." architecture-review.md §2
-independently names this exact stream and states the same sampling rule
-("one sampled order per symbol per 1000 ms -- store as *sampled*"); every
-persisted row is written with that provenance, never implied to be complete.
+Connection contract (current as of Sept 2026): This stream is accessed via
+the WebSocket API at `wss://fstream.binance.com/market/stream` with explicit
+JSON subscription: `{"method": "SUBSCRIBE", "params": ["!forceOrder@arr"]}`.
+The legacy raw-stream path `/ws/!forceOrder@arr` was deprecated April 23, 2026,
+and this implementation uses the current /market/stream path.
 
-The stream is single, global, and carries every symbol at once -- there is
-no per-symbol subscribe/unsubscribe on `!forceOrder@arr`, unlike the spot
-@aggTrade/@depth combined streams this recorder otherwise uses. Connection
-lifecycle is therefore desired-set-driven only at the granularity of "any
-liquidation symbol desired at all", not per symbol; each event is filtered
-against SubscriptionManager's "liquidation" desired-symbol set before being
-persisted, and only accepted symbols count toward Data Health.
+Per official spec, the stream is explicitly *sampled*: "only the latest one
+liquidation order within 1000ms will be pushed as the snapshot." "If no
+liquidation happens in the interval of 1000ms, no stream will be pushed."
+architecture-review.md §2 independently names this and states the same rule.
+Every row is stored with provenance marked as "sampled public liquidation
+event," never implied complete.
 
-Host: `wss://fstream.binance.com`, the USDⓈ-M futures websocket base --
-distinct from the spot-only `wss://data-stream.binance.vision` this recorder
-uses for @aggTrade/@depth (architecture-review.md §2 keeps Spot as primary
-for trade/depth and USDⓈ-M strictly for positioning/liquidation context).
+The stream is single/global, no per-symbol subscribe/unsubscribe. Connection
+lifecycle is desired-set-driven only at "any liquidation symbol desired,"
+not per symbol; events are filtered against SubscriptionManager's
+"liquidation" desired-symbol set before persist/Data Health.
 
-Gap/recovery semantics: there is no backfill path for a missed liquidation
-interval, and there cannot be one -- Binance itself does not publish a
-complete historical liquidation feed (the stream is explicitly a sampled
-snapshot even while healthy: "only the latest one ... within 1000ms" per its
-own docs), so there is no authoritative source to re-fetch a gap from even in
-principle. A stalled/dropped connection is therefore handled purely as a
-detection problem, reusing DataHealthTracker's existing stale (30s) /
-suspended (120s) / gap_started_at mechanism unmodified: silence on a desired
-symbol's channel ages it to an explicit gap exactly as positioning does (see
-positioning_poller.py's own gap/recovery note for the identical reasoning
-applied to polling). A reconnect of the underlying websocket is not treated
-as proof the missed interval was recovered -- only a new `on_liquidation`
-call for that symbol clears the gap, which is the natural consequence of
-`record_message` being the only thing that clears `gap_started_at`.
-See tests/test_positioning_liquidation_data_health.py for the interference
-proof (stall -> suspended -> explicit gap -> new event clears it).
+Gap/recovery: no backfill path exists -- Binance publishes no authoritative
+historical market-wide liquidation feed (the stream is inherently sampled).
+DataHealthTracker's stale(30s)/suspended(120s)/gap_started_at mechanism is
+reused unmodified: silence on a desired symbol ages it to explicit gap. A
+reconnect alone is not recovery -- only a new `on_liquidation` event clears
+the gap, via `record_message` clearing `gap_started_at`.
+See tests/test_positioning_liquidation_data_health.py for the proof.
 """
 
 from __future__ import annotations
@@ -60,9 +44,12 @@ import websockets
 
 logger = logging.getLogger(__name__)
 
+# Official Binance USDⓈ-M WebSocket API endpoint (current, Sept 2026).
+# The legacy /ws/!forceOrder@arr path was deprecated April 23, 2026.
 STREAM_HOST = "wss://fstream.binance.com"
-STREAM_PATH = "/ws/!forceOrder@arr"
+STREAM_PATH = "/market/stream"
 RECONNECT_DELAY_SECONDS = 2.0
+SUBSCRIPTION_REQUEST = {"method": "SUBSCRIBE", "params": ["!forceOrder@arr"], "id": 1}
 
 
 def parse_liquidation(raw: dict) -> dict:
@@ -98,23 +85,31 @@ async def run_liquidation_stream(
     *,
     stop_event: asyncio.Event | None = None,
 ) -> None:
-    """Connects to the single all-market `!forceOrder@arr` stream and calls
-    `on_liquidation(parsed)` for every message, reconnecting on any drop.
-    Runs until `stop_event` is set (or forever if none given). The caller is
-    responsible for filtering `parsed["symbol"]` against whatever symbol set
-    it cares about -- this stream carries every USDⓈ-M symbol's liquidations
-    and cannot be narrowed server-side."""
+    """Connects to `wss://fstream.binance.com/market/stream` with explicit
+    `!forceOrder@arr` subscription (the current official API as of Sept 2026).
+    Calls `on_liquidation(parsed)` for every forceOrder event, reconnecting
+    on any drop. Runs until `stop_event` is set. The caller filters
+    `parsed["symbol"]` against desired symbols -- this stream carries all
+    USDⓈ-M symbols and cannot be narrowed server-side."""
     stop_event = stop_event or asyncio.Event()
     url = f"{STREAM_HOST}{STREAM_PATH}"
 
     while not stop_event.is_set():
         try:
             async with websockets.connect(url, ping_interval=20, ping_timeout=20) as ws:
-                logger.info("liquidation stream connected (all-market)")
+                # Send subscription request per the official WebSocket API contract.
+                await ws.send(json.dumps(SUBSCRIPTION_REQUEST))
+                logger.info("liquidation stream connected (all-market, /market/stream)")
+
                 while not stop_event.is_set():
                     message = await ws.recv()
                     ts_received = datetime.now(UTC)
                     envelope = json.loads(message)
+
+                    # Skip non-forceOrder messages (e.g., subscription responses).
+                    if envelope.get("e") != "forceOrder":
+                        continue
+
                     parsed = parse_liquidation(envelope)
                     parsed["ts_received"] = ts_received
                     await on_liquidation(parsed)

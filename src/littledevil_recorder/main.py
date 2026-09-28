@@ -31,6 +31,7 @@ from littledevil_recorder.local_manifest import (
     record_flush_failure,
     record_process_start,
 )
+from littledevil_recorder.positioning_basis import run_basis_poller
 from littledevil_recorder.positioning_poller import run_positioning_poller
 from littledevil_recorder.restart_recovery import backfill_missed_trades, last_recorded_trade
 from littledevil_recorder.storage import (
@@ -233,7 +234,7 @@ async def recover_and_run(
         kinds_by_channel = {
             "trades": ["trades"],
             "depth": ["depth"],
-            "positioning": ["open_interest", "funding", "mark_index"],
+            "positioning": ["open_interest", "funding", "mark_index", "basis"],
             "liquidation": ["liquidation"],
         }
         while not stop_event.is_set():
@@ -275,6 +276,9 @@ async def recover_and_run(
         asyncio.create_task(periodic_compaction()),
         asyncio.create_task(periodic_reconcile()),
         asyncio.create_task(run_positioning_poller(
+            subscriptions, writer, stop_event=stop_event, on_symbol_polled=on_positioning_polled,
+        )),
+        asyncio.create_task(run_basis_poller(
             subscriptions, writer, stop_event=stop_event, on_symbol_polled=on_positioning_polled,
         )),
         asyncio.create_task(run_liquidation_stream(on_liquidation, stop_event=stop_event)),

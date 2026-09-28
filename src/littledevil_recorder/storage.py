@@ -113,6 +113,13 @@ LIQUIDATION_SCHEMA = pa.schema([
     ("accumulated_qty", pa.float64()), ("order_trade_time", pa.timestamp("us", tz="UTC")),
     ("source", pa.string()),
 ])
+BASIS_SCHEMA = pa.schema([
+    ("ts_exchange", pa.timestamp("us", tz="UTC")), ("ts_received", pa.timestamp("us", tz="UTC")),
+    ("index_price", pa.float64()), ("futures_price", pa.float64()),
+    ("basis_rate", pa.float64()), ("basis", pa.float64()),
+    ("annualized_basis_rate", pa.float64()), ("contract_type", pa.string()),
+    ("source", pa.string()),
+])
 
 SCHEMAS: dict[str, pa.Schema] = {
     "trades": TRADES_SCHEMA,
@@ -121,6 +128,7 @@ SCHEMAS: dict[str, pa.Schema] = {
     "funding": FUNDING_SCHEMA,
     "mark_index": MARK_INDEX_SCHEMA,
     "liquidation": LIQUIDATION_SCHEMA,
+    "basis": BASIS_SCHEMA,
 }
 
 FLUSH_BATCH_SIZE = 20_000
@@ -326,6 +334,7 @@ class ParquetWriter:
         self._funding: dict[tuple[str, date], _Buffer] = {}
         self._mark_index: dict[tuple[str, date], _Buffer] = {}
         self._liquidation: dict[tuple[str, date], _Buffer] = {}
+        self._basis: dict[tuple[str, date], _Buffer] = {}
         self._state = _State(data_root)
 
     def write_trade(self, symbol: str, *, trade_id: int, ts_exchange: datetime, ts_received: datetime,
@@ -374,6 +383,14 @@ class ParquetWriter:
              avg_price, order_status, last_filled_qty, accumulated_qty, order_trade_time, source)
         )
 
+    def write_basis(self, symbol: str, *, ts_exchange: datetime, ts_received: datetime,
+                    index_price: float, futures_price: float, basis_rate: float, basis: float,
+                    annualized_basis_rate: float, contract_type: str, source: str = "binance_usdm") -> None:
+        self._basis.setdefault((symbol, _utc_date(ts_exchange)), _Buffer()).rows.append(
+            (ts_exchange, ts_received, index_price, futures_price, basis_rate, basis,
+             annualized_basis_rate, contract_type, source)
+        )
+
     def flush_trades(self, symbol: str, day: date) -> Path | None:
         return self._flush(self._trades, "trades", TRADES_SCHEMA, symbol, day)
 
@@ -392,6 +409,9 @@ class ParquetWriter:
     def flush_liquidation(self, symbol: str, day: date) -> Path | None:
         return self._flush(self._liquidation, "liquidation", LIQUIDATION_SCHEMA, symbol, day)
 
+    def flush_basis(self, symbol: str, day: date) -> Path | None:
+        return self._flush(self._basis, "basis", BASIS_SCHEMA, symbol, day)
+
     def flush_all(self) -> list[Path]:
         written: list[Path] = []
         errors: list[FlushError] = []
@@ -402,6 +422,7 @@ class ParquetWriter:
             (self._funding, "funding", FUNDING_SCHEMA),
             (self._mark_index, "mark_index", MARK_INDEX_SCHEMA),
             (self._liquidation, "liquidation", LIQUIDATION_SCHEMA),
+            (self._basis, "basis", BASIS_SCHEMA),
         ):
             for symbol, day in list(buffers):
                 try:

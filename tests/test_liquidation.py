@@ -82,6 +82,10 @@ async def test_run_liquidation_stream_reconnects_after_drop(monkeypatch):
         def __init__(self, messages):
             self._messages = list(messages)
 
+        async def send(self, message):
+            # Acknowledge subscription request
+            pass
+
         async def recv(self):
             if not self._messages:
                 raise websockets.ConnectionClosed(None, None)
