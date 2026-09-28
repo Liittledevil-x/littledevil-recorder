@@ -35,6 +35,13 @@ DEPTH_SCHEMA = pa.schema([
     ("ts_exchange", pa.timestamp("us", tz="UTC")), ("ts_received", pa.timestamp("us", tz="UTC")),
     ("is_snapshot", pa.bool_()), ("bids", pa.string()), ("asks", pa.string()), ("seq", pa.int64()),
 ])
+FUNDING_OI_SCHEMA = pa.schema([
+    ("ts_exchange", pa.timestamp("us", tz="UTC")), ("ts_received", pa.timestamp("us", tz="UTC")),
+    ("open_interest", pa.float64()), ("funding_rate", pa.float64()),
+    ("mark_price", pa.float64()), ("index_price", pa.float64()), ("source", pa.string()),
+])
+
+SCHEMAS: dict[str, pa.Schema] = {"trades": TRADES_SCHEMA, "depth": DEPTH_SCHEMA, "funding_oi": FUNDING_OI_SCHEMA}
 
 FLUSH_BATCH_SIZE = 20_000
 STATE_FILENAME = "recorder_state.sqlite"
@@ -235,6 +242,7 @@ class ParquetWriter:
         self._root = data_root
         self._trades: dict[tuple[str, date], _Buffer] = {}
         self._depth: dict[tuple[str, date], _Buffer] = {}
+        self._funding_oi: dict[tuple[str, date], _Buffer] = {}
         self._state = _State(data_root)
 
     def write_trade(self, symbol: str, *, trade_id: int, ts_exchange: datetime, ts_received: datetime,
@@ -251,16 +259,26 @@ class ParquetWriter:
             (ts_exchange, ts_received, is_snapshot, bids_json, asks_json, seq)
         )
 
+    def write_funding_oi(self, symbol: str, *, ts_exchange: datetime, ts_received: datetime,
+                        open_interest: float, funding_rate: float, mark_price: float,
+                        index_price: float, source: str = "binance_usdm") -> None:
+        self._funding_oi.setdefault((symbol, _utc_date(ts_exchange)), _Buffer()).rows.append(
+            (ts_exchange, ts_received, open_interest, funding_rate, mark_price, index_price, source)
+        )
+
     def flush_trades(self, symbol: str, day: date) -> Path | None:
         return self._flush(self._trades, "trades", TRADES_SCHEMA, symbol, day)
 
     def flush_depth(self, symbol: str, day: date) -> Path | None:
         return self._flush(self._depth, "depth", DEPTH_SCHEMA, symbol, day)
 
+    def flush_funding_oi(self, symbol: str, day: date) -> Path | None:
+        return self._flush(self._funding_oi, "funding_oi", FUNDING_OI_SCHEMA, symbol, day)
+
     def flush_all(self) -> list[Path]:
         written: list[Path] = []
         errors: list[FlushError] = []
-        for buffers, kind, schema in ((self._trades, "trades", TRADES_SCHEMA), (self._depth, "depth", DEPTH_SCHEMA)):
+        for buffers, kind, schema in ((self._trades, "trades", TRADES_SCHEMA), (self._depth, "depth", DEPTH_SCHEMA), (self._funding_oi, "funding_oi", FUNDING_OI_SCHEMA)):
             for symbol, day in list(buffers):
                 try:
                     path = self._flush(buffers, kind, schema, symbol, day)
@@ -328,7 +346,7 @@ def compact_closed_day(root: Path, kind: str, symbol: str, day: date) -> Path | 
         sources = state.active_part_rows(kind, symbol, day.isoformat())
         if len(sources) < 2:
             return None
-        schema = TRADES_SCHEMA if kind == "trades" else DEPTH_SCHEMA
+        schema = SCHEMAS[kind]
         part_dir = root / kind / symbol / day.isoformat()
         stem = f"compacted-{uuid.uuid4().hex}"
         final_path, tmp_path = part_dir / f"{stem}.parquet", part_dir / f"{stem}.parquet.tmp"
