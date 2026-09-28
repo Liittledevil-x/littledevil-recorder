@@ -32,7 +32,7 @@ from pathlib import Path
 
 DESIRED_SUBSCRIPTIONS_FILENAME = "desired_subscriptions.json"
 
-CHANNELS = ("trades", "depth", "funding_oi")
+CHANNELS = ("trades", "depth", "positioning", "liquidation")
 
 
 def _local_dir(data_root: Path) -> Path:

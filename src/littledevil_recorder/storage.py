@@ -11,6 +11,50 @@ The manifest is also the durable trade-ID uniqueness boundary. A trade part
 is fully written and atomically renamed before a SQLite transaction makes the
 part and its IDs visible together. A crash before that commit leaves an
 ignored orphan; a crash after it has both the part and index.
+
+Provenance contract (data-and-events.md gives no single explicit statement of
+this; it is assembled here from the two-clock convention trades/depth already
+use, extended to positioning/liquidation in this pass):
+
+- ``ts_exchange`` -- the venue's own authoritative event/observation time,
+  always sourced from a field the venue itself stamped (trade time, book
+  update time, REST ``time``/``fundingTime``, stream ``E``). Never derived
+  from local receipt time, and never derived from another endpoint's
+  unrelated timestamp (see positioning_poller.py's module docstring for the
+  concrete case this forbids: premiumIndex's poll-time ``time`` field is not
+  a funding settlement time).
+- ``ts_received`` -- local wall-clock at the moment this process observed the
+  message/response. Always ``datetime.now(UTC)`` captured as early as
+  possible in the receive path.
+- symbol -- always the first positional argument to every ``write_*`` method;
+  encoded in the storage path (``{kind}/{symbol}/{day}``), not as a row
+  column, consistent with trades/depth.
+- source/venue -- ``TRADES_SCHEMA`` carries a ``venue`` column (all current
+  writers pass ``"binance"``). ``DEPTH_SCHEMA`` carries no source column at
+  all (single-venue by construction of the file path today). The new
+  positioning/liquidation schemas carry a ``source`` column (all current
+  writers pass ``"binance_usdm"``), naming the endpoint family rather than
+  repeating "binance". This is a real, pre-existing naming inconsistency
+  (``venue`` vs ``source`` vs absent) rather than a unified contract --
+  recorded here honestly rather than silently unified or silently left
+  undocumented; harmonizing it is a schema-migration decision for Omar, not
+  something to do silently in this pass.
+- channel -- not a Parquet column; channel identity (``binance_trades_{s}``,
+  ``binance_depth_{s}``, ``binance_positioning_{s}``,
+  ``binance_liquidation_{s}``) lives only in ``DataHealthTracker`` and
+  ``SubscriptionManager``, since it is a subscription/health concept, not a
+  fact about the observed row.
+- sequence/ID -- ``trade_id`` (trades) and ``seq`` (depth, the book update
+  ID) are the two existing per-row identifiers used for ordering/dedup
+  upstream. Positioning has no per-poll sequence number (each poll is a full
+  independent observation, not a delta) so none is stored. Liquidation has no
+  venue-assigned sequence number either (the stream itself is explicitly
+  sampled/lossy per liquidation.py's docstring), so none is fabricated.
+- recovery/gap status -- never a Parquet column for any kind. It lives
+  exclusively in ``data_health`` (``status``, ``gap_started_at``), which is
+  the single source of truth for "was this interval actually observed,"
+  reused unchanged for positioning/liquidation rather than duplicated into
+  Parquet (see DataHealthTracker in data_health.py).
 """
 
 from __future__ import annotations
@@ -35,13 +79,49 @@ DEPTH_SCHEMA = pa.schema([
     ("ts_exchange", pa.timestamp("us", tz="UTC")), ("ts_received", pa.timestamp("us", tz="UTC")),
     ("is_snapshot", pa.bool_()), ("bids", pa.string()), ("asks", pa.string()), ("seq", pa.int64()),
 ])
-FUNDING_OI_SCHEMA = pa.schema([
+# Positioning is modeled as separate, independently-sourced event records per
+# Binance USDⓈ-M endpoint (data-and-events.md gives no explicit Parquet layout
+# for positioning; this follows its own trade/depth convention of one record
+# per observed fact, and architecture-review.md §4.3 classifies OI value and
+# funding rate as separate "Observed" facts, not one joint fact). Each record
+# type is written only when its own source endpoint actually returned it -- no
+# schema mixes fields from more than one endpoint, so there is no unobserved
+# field to zero-fill. This replaces the single funding_oi schema, which
+# silently wrote 0.0 for funding_rate/mark_price/index_price on every poll
+# because those fields do not exist in the openInterest response it called.
+OPEN_INTEREST_SCHEMA = pa.schema([
     ("ts_exchange", pa.timestamp("us", tz="UTC")), ("ts_received", pa.timestamp("us", tz="UTC")),
-    ("open_interest", pa.float64()), ("funding_rate", pa.float64()),
-    ("mark_price", pa.float64()), ("index_price", pa.float64()), ("source", pa.string()),
+    ("open_interest", pa.float64()), ("source", pa.string()),
+])
+FUNDING_SCHEMA = pa.schema([
+    ("ts_exchange", pa.timestamp("us", tz="UTC")), ("ts_received", pa.timestamp("us", tz="UTC")),
+    ("funding_rate", pa.float64()), ("funding_time", pa.timestamp("us", tz="UTC")),
+    ("mark_price", pa.float64()), ("rate_type", pa.string()), ("source", pa.string()),
+])
+MARK_INDEX_SCHEMA = pa.schema([
+    ("ts_exchange", pa.timestamp("us", tz="UTC")), ("ts_received", pa.timestamp("us", tz="UTC")),
+    ("mark_price", pa.float64()), ("index_price", pa.float64()),
+    ("estimated_settle_price", pa.float64()), ("last_funding_rate", pa.float64()),
+    ("interest_rate", pa.float64()), ("next_funding_time", pa.timestamp("us", tz="UTC")),
+    ("source", pa.string()),
+])
+LIQUIDATION_SCHEMA = pa.schema([
+    ("ts_exchange", pa.timestamp("us", tz="UTC")), ("ts_received", pa.timestamp("us", tz="UTC")),
+    ("side", pa.string()), ("order_type", pa.string()), ("time_in_force", pa.string()),
+    ("orig_qty", pa.float64()), ("price", pa.float64()), ("avg_price", pa.float64()),
+    ("order_status", pa.string()), ("last_filled_qty", pa.float64()),
+    ("accumulated_qty", pa.float64()), ("order_trade_time", pa.timestamp("us", tz="UTC")),
+    ("source", pa.string()),
 ])
 
-SCHEMAS: dict[str, pa.Schema] = {"trades": TRADES_SCHEMA, "depth": DEPTH_SCHEMA, "funding_oi": FUNDING_OI_SCHEMA}
+SCHEMAS: dict[str, pa.Schema] = {
+    "trades": TRADES_SCHEMA,
+    "depth": DEPTH_SCHEMA,
+    "open_interest": OPEN_INTEREST_SCHEMA,
+    "funding": FUNDING_SCHEMA,
+    "mark_index": MARK_INDEX_SCHEMA,
+    "liquidation": LIQUIDATION_SCHEMA,
+}
 
 FLUSH_BATCH_SIZE = 20_000
 STATE_FILENAME = "recorder_state.sqlite"
@@ -242,7 +322,10 @@ class ParquetWriter:
         self._root = data_root
         self._trades: dict[tuple[str, date], _Buffer] = {}
         self._depth: dict[tuple[str, date], _Buffer] = {}
-        self._funding_oi: dict[tuple[str, date], _Buffer] = {}
+        self._open_interest: dict[tuple[str, date], _Buffer] = {}
+        self._funding: dict[tuple[str, date], _Buffer] = {}
+        self._mark_index: dict[tuple[str, date], _Buffer] = {}
+        self._liquidation: dict[tuple[str, date], _Buffer] = {}
         self._state = _State(data_root)
 
     def write_trade(self, symbol: str, *, trade_id: int, ts_exchange: datetime, ts_received: datetime,
@@ -259,11 +342,36 @@ class ParquetWriter:
             (ts_exchange, ts_received, is_snapshot, bids_json, asks_json, seq)
         )
 
-    def write_funding_oi(self, symbol: str, *, ts_exchange: datetime, ts_received: datetime,
-                        open_interest: float, funding_rate: float, mark_price: float,
-                        index_price: float, source: str = "binance_usdm") -> None:
-        self._funding_oi.setdefault((symbol, _utc_date(ts_exchange)), _Buffer()).rows.append(
-            (ts_exchange, ts_received, open_interest, funding_rate, mark_price, index_price, source)
+    def write_open_interest(self, symbol: str, *, ts_exchange: datetime, ts_received: datetime,
+                            open_interest: float, source: str = "binance_usdm") -> None:
+        self._open_interest.setdefault((symbol, _utc_date(ts_exchange)), _Buffer()).rows.append(
+            (ts_exchange, ts_received, open_interest, source)
+        )
+
+    def write_funding(self, symbol: str, *, ts_exchange: datetime, ts_received: datetime,
+                      funding_rate: float, funding_time: datetime, mark_price: float,
+                      rate_type: str | None, source: str = "binance_usdm") -> None:
+        self._funding.setdefault((symbol, _utc_date(ts_exchange)), _Buffer()).rows.append(
+            (ts_exchange, ts_received, funding_rate, funding_time, mark_price, rate_type, source)
+        )
+
+    def write_mark_index(self, symbol: str, *, ts_exchange: datetime, ts_received: datetime,
+                         mark_price: float, index_price: float, estimated_settle_price: float,
+                         last_funding_rate: float, interest_rate: float,
+                         next_funding_time: datetime, source: str = "binance_usdm") -> None:
+        self._mark_index.setdefault((symbol, _utc_date(ts_exchange)), _Buffer()).rows.append(
+            (ts_exchange, ts_received, mark_price, index_price, estimated_settle_price,
+             last_funding_rate, interest_rate, next_funding_time, source)
+        )
+
+    def write_liquidation(self, symbol: str, *, ts_exchange: datetime, ts_received: datetime,
+                          side: str, order_type: str, time_in_force: str, orig_qty: float,
+                          price: float, avg_price: float, order_status: str,
+                          last_filled_qty: float, accumulated_qty: float,
+                          order_trade_time: datetime, source: str = "binance_usdm") -> None:
+        self._liquidation.setdefault((symbol, _utc_date(ts_exchange)), _Buffer()).rows.append(
+            (ts_exchange, ts_received, side, order_type, time_in_force, orig_qty, price,
+             avg_price, order_status, last_filled_qty, accumulated_qty, order_trade_time, source)
         )
 
     def flush_trades(self, symbol: str, day: date) -> Path | None:
@@ -272,13 +380,29 @@ class ParquetWriter:
     def flush_depth(self, symbol: str, day: date) -> Path | None:
         return self._flush(self._depth, "depth", DEPTH_SCHEMA, symbol, day)
 
-    def flush_funding_oi(self, symbol: str, day: date) -> Path | None:
-        return self._flush(self._funding_oi, "funding_oi", FUNDING_OI_SCHEMA, symbol, day)
+    def flush_open_interest(self, symbol: str, day: date) -> Path | None:
+        return self._flush(self._open_interest, "open_interest", OPEN_INTEREST_SCHEMA, symbol, day)
+
+    def flush_funding(self, symbol: str, day: date) -> Path | None:
+        return self._flush(self._funding, "funding", FUNDING_SCHEMA, symbol, day)
+
+    def flush_mark_index(self, symbol: str, day: date) -> Path | None:
+        return self._flush(self._mark_index, "mark_index", MARK_INDEX_SCHEMA, symbol, day)
+
+    def flush_liquidation(self, symbol: str, day: date) -> Path | None:
+        return self._flush(self._liquidation, "liquidation", LIQUIDATION_SCHEMA, symbol, day)
 
     def flush_all(self) -> list[Path]:
         written: list[Path] = []
         errors: list[FlushError] = []
-        for buffers, kind, schema in ((self._trades, "trades", TRADES_SCHEMA), (self._depth, "depth", DEPTH_SCHEMA), (self._funding_oi, "funding_oi", FUNDING_OI_SCHEMA)):
+        for buffers, kind, schema in (
+            (self._trades, "trades", TRADES_SCHEMA),
+            (self._depth, "depth", DEPTH_SCHEMA),
+            (self._open_interest, "open_interest", OPEN_INTEREST_SCHEMA),
+            (self._funding, "funding", FUNDING_SCHEMA),
+            (self._mark_index, "mark_index", MARK_INDEX_SCHEMA),
+            (self._liquidation, "liquidation", LIQUIDATION_SCHEMA),
+        ):
             for symbol, day in list(buffers):
                 try:
                     path = self._flush(buffers, kind, schema, symbol, day)

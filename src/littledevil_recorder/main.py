@@ -25,11 +25,13 @@ from littledevil_recorder.aggtrade import run_aggtrade_stream
 from littledevil_recorder.data_health import DataHealthTracker
 from littledevil_recorder.db import connect
 from littledevil_recorder.depth import run_depth_stream
+from littledevil_recorder.liquidation import run_liquidation_stream
 from littledevil_recorder.local_manifest import (
     record_compaction_failure,
     record_flush_failure,
     record_process_start,
 )
+from littledevil_recorder.positioning_poller import run_positioning_poller
 from littledevil_recorder.restart_recovery import backfill_missed_trades, last_recorded_trade
 from littledevil_recorder.storage import (
     CompactionError,
@@ -97,6 +99,8 @@ def _flush_all_logging_failures(writer: ParquetWriter) -> list:
 async def recover_and_run(
     trade_symbols: list[str],
     depth_symbols: list[str],
+    positioning_symbols: list[str] | None = None,
+    liquidation_symbols: list[str] | None = None,
     *,
     stop_event: asyncio.Event,
 ) -> None:
@@ -116,6 +120,10 @@ async def recover_and_run(
     if not subscriptions.desired_symbols("trades") and not subscriptions.desired_symbols("depth"):
         subscriptions.add_symbols("trades", trade_symbols)
         subscriptions.add_symbols("depth", depth_symbols)
+    if not subscriptions.desired_symbols("positioning"):
+        subscriptions.add_symbols("positioning", positioning_symbols or [])
+    if not subscriptions.desired_symbols("liquidation"):
+        subscriptions.add_symbols("liquidation", liquidation_symbols or [])
     trade_symbols = subscriptions.desired_symbols("trades")
     depth_symbols = subscriptions.desired_symbols("depth")
 
@@ -126,6 +134,10 @@ async def recover_and_run(
         health.register(f"binance_trades_{symbol}")
     for symbol in depth_symbols:
         health.register(f"binance_depth_{symbol}")
+    for symbol in subscriptions.desired_symbols("positioning"):
+        health.register(f"binance_positioning_{symbol}")
+    for symbol in subscriptions.desired_symbols("liquidation"):
+        health.register(f"binance_liquidation_{symbol}")
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         today = datetime.now(UTC).date()
@@ -166,6 +178,37 @@ async def recover_and_run(
         )
         health.record_message(f"binance_depth_{symbol}")
 
+    def on_positioning_polled(symbol: str, error: Exception | None) -> None:
+        channel = f"binance_positioning_{symbol}"
+        health.register(channel)
+        if error is None:
+            health.record_message(channel)
+        # A failed poll intentionally does not record_message: the channel
+        # ages toward stale/suspended via sweep() instead of being marked
+        # falsely fresh, so a persistent Binance-side failure is visible in
+        # Data Health rather than hidden by a same-tick health touch.
+
+    async def on_liquidation(event: dict) -> None:
+        symbol = event["symbol"]
+        if symbol not in subscriptions.desired_symbols("liquidation"):
+            return
+        writer.write_liquidation(
+            symbol,
+            ts_exchange=event["ts_exchange"],
+            ts_received=event["ts_received"],
+            side=event["side"],
+            order_type=event["order_type"],
+            time_in_force=event["time_in_force"],
+            orig_qty=event["orig_qty"],
+            price=event["price"],
+            avg_price=event["avg_price"],
+            order_status=event["order_status"],
+            last_filled_qty=event["last_filled_qty"],
+            accumulated_qty=event["accumulated_qty"],
+            order_trade_time=event["order_trade_time"],
+        )
+        health.record_message(f"binance_liquidation_{symbol}")
+
     async def periodic_flush() -> None:
         while not stop_event.is_set():
             await asyncio.sleep(FLUSH_INTERVAL_SECONDS)
@@ -187,19 +230,26 @@ async def recover_and_run(
         """Closed-day maintenance is intentionally off the ingest loop.
         A failed part read or disk write is durably logged and retried on a
         later pass; it cannot interrupt callbacks or normal flushing."""
+        kinds_by_channel = {
+            "trades": ["trades"],
+            "depth": ["depth"],
+            "positioning": ["open_interest", "funding", "mark_index"],
+            "liquidation": ["liquidation"],
+        }
         while not stop_event.is_set():
             await asyncio.sleep(COMPACTION_INTERVAL_SECONDS)
-            for kind in ("trades", "depth"):
-                for symbol in subscriptions.desired_symbols(kind):
-                    for day in closed_part_days(data_root(), kind, symbol):
-                        try:
-                            path = await asyncio.to_thread(compact_closed_day, data_root(), kind, symbol, day)
-                            if path:
-                                logger.info("compacted %s/%s/%s", kind, symbol, day.isoformat())
-                        except CompactionError as exc:
-                            logger.exception("background compaction failed for %s/%s/%s", kind, symbol, day)
-                            record_compaction_failure(data_root(), kind=exc.kind, symbol=exc.symbol,
-                                                      day=exc.day, error=repr(exc.cause))
+            for channel, kinds in kinds_by_channel.items():
+                for symbol in subscriptions.desired_symbols(channel):
+                    for kind in kinds:
+                        for day in closed_part_days(data_root(), kind, symbol):
+                            try:
+                                path = await asyncio.to_thread(compact_closed_day, data_root(), kind, symbol, day)
+                                if path:
+                                    logger.info("compacted %s/%s/%s", kind, symbol, day.isoformat())
+                            except CompactionError as exc:
+                                logger.exception("background compaction failed for %s/%s/%s", kind, symbol, day)
+                                record_compaction_failure(data_root(), kind=exc.kind, symbol=exc.symbol,
+                                                          day=exc.day, error=repr(exc.cause))
 
     stream_supervisor = _StreamSupervisor(
         subscriptions=subscriptions,
@@ -224,6 +274,10 @@ async def recover_and_run(
         asyncio.create_task(periodic_health_sweep()),
         asyncio.create_task(periodic_compaction()),
         asyncio.create_task(periodic_reconcile()),
+        asyncio.create_task(run_positioning_poller(
+            subscriptions, writer, stop_event=stop_event, on_symbol_polled=on_positioning_polled,
+        )),
+        asyncio.create_task(run_liquidation_stream(on_liquidation, stop_event=stop_event)),
     ]
 
     try:
@@ -343,8 +397,12 @@ def main() -> None:
 
     trade_symbols_env = os.getenv("LITTLEDEVIL_TRADE_SYMBOLS", "BTCUSDT,ETHUSDT")
     depth_symbols_env = os.getenv("LITTLEDEVIL_DEPTH_SYMBOLS", "BTCUSDT,ETHUSDT")
+    positioning_symbols_env = os.getenv("LITTLEDEVIL_POSITIONING_SYMBOLS", "BTCUSDT,ETHUSDT")
+    liquidation_symbols_env = os.getenv("LITTLEDEVIL_LIQUIDATION_SYMBOLS", "BTCUSDT,ETHUSDT")
     trade_symbols = [s.strip() for s in trade_symbols_env.split(",") if s.strip()]
     depth_symbols = [s.strip() for s in depth_symbols_env.split(",") if s.strip()]
+    positioning_symbols = [s.strip() for s in positioning_symbols_env.split(",") if s.strip()]
+    liquidation_symbols = [s.strip() for s in liquidation_symbols_env.split(",") if s.strip()]
 
     stop_event = asyncio.Event()
 
@@ -352,7 +410,9 @@ def main() -> None:
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGTERM, signal.SIGINT):
             loop.add_signal_handler(sig, stop_event.set)
-        await recover_and_run(trade_symbols, depth_symbols, stop_event=stop_event)
+        await recover_and_run(
+            trade_symbols, depth_symbols, positioning_symbols, liquidation_symbols, stop_event=stop_event,
+        )
 
     asyncio.run(run())
 
