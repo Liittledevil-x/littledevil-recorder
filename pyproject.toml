@@ -33,3 +33,6 @@ allow-direct-references = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+markers = [
+    "smoke: opt-in Binance endpoint smoke tests (require network)",
+]
