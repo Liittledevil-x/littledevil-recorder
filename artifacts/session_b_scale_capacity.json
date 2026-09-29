@@ -1,0 +1,363 @@
+{
+  "actual_duration_seconds": 141.844145,
+  "capacity": {
+    "basis": {
+      "bytes_per_event": null,
+      "extrapolated_GB_per_day": null,
+      "measured_MB_per_hour": null,
+      "observed_rows": 0,
+      "raw_bytes": 0,
+      "status": "INSUFFICIENT SAMPLE"
+    },
+    "depth": {
+      "bytes_per_event": {
+        "label": "MEASURED",
+        "value": 193.6790076335878
+      },
+      "extrapolated_GB_per_day": {
+        "label": "EXTRAPOLATED",
+        "value": 0.30909086589368917
+      },
+      "measured_MB_per_hour": {
+        "label": "MEASURED",
+        "value": 12.878786078903715
+      },
+      "observed_rows": 2620,
+      "raw_bytes": 507439,
+      "status": "MEASURED"
+    },
+    "funding": {
+      "bytes_per_event": {
+        "label": "MEASURED",
+        "value": 2350.0
+      },
+      "extrapolated_GB_per_day": {
+        "label": "EXTRAPOLATED",
+        "value": 0.005725721001737506
+      },
+      "measured_MB_per_hour": {
+        "label": "MEASURED",
+        "value": 0.23857170840572942
+      },
+      "observed_rows": 4,
+      "raw_bytes": 9400,
+      "status": "MEASURED"
+    },
+    "index": {
+      "bytes_per_event": {
+        "label": "MEASURED",
+        "value": 2098.0
+      },
+      "extrapolated_GB_per_day": {
+        "label": "EXTRAPOLATED",
+        "value": 0.007667593188284225
+      },
+      "measured_MB_per_hour": {
+        "label": "MEASURED",
+        "value": 0.3194830495118427
+      },
+      "observed_rows": 6,
+      "physical_bytes_counted_once": true,
+      "raw_bytes": 12588,
+      "status": "MEASURED",
+      "storage_shared_with": "mark_index"
+    },
+    "liquidation": {
+      "bytes_per_event": null,
+      "extrapolated_GB_per_day": null,
+      "measured_MB_per_hour": null,
+      "observed_rows": 0,
+      "raw_bytes": 0,
+      "status": "INSUFFICIENT SAMPLE"
+    },
+    "mark": {
+      "bytes_per_event": {
+        "label": "MEASURED",
+        "value": 2098.0
+      },
+      "extrapolated_GB_per_day": {
+        "label": "EXTRAPOLATED",
+        "value": 0.007667593188284225
+      },
+      "measured_MB_per_hour": {
+        "label": "MEASURED",
+        "value": 0.3194830495118427
+      },
+      "observed_rows": 6,
+      "physical_bytes_counted_once": true,
+      "raw_bytes": 12588,
+      "status": "MEASURED",
+      "storage_shared_with": "mark_index"
+    },
+    "mark_index": {
+      "bytes_per_event": {
+        "label": "MEASURED",
+        "value": 2098.0
+      },
+      "extrapolated_GB_per_day": {
+        "label": "EXTRAPOLATED",
+        "value": 0.007667593188284225
+      },
+      "measured_MB_per_hour": {
+        "label": "MEASURED",
+        "value": 0.3194830495118427
+      },
+      "observed_rows": 6,
+      "raw_bytes": 12588,
+      "status": "MEASURED"
+    },
+    "open_interest": {
+      "bytes_per_event": {
+        "label": "MEASURED",
+        "value": 1461.0
+      },
+      "extrapolated_GB_per_day": {
+        "label": "EXTRAPOLATED",
+        "value": 0.0035596929291653173
+      },
+      "measured_MB_per_hour": {
+        "label": "MEASURED",
+        "value": 0.14832053871522158
+      },
+      "observed_rows": 4,
+      "raw_bytes": 5844,
+      "status": "MEASURED"
+    },
+    "trades": {
+      "bytes_per_event": {
+        "label": "MEASURED",
+        "value": 35.26649417852523
+      },
+      "extrapolated_GB_per_day": {
+        "label": "EXTRAPOLATED",
+        "value": 0.01660520002429427
+      },
+      "measured_MB_per_hour": {
+        "label": "MEASURED",
+        "value": 0.6918833343455947
+      },
+      "observed_rows": 773,
+      "raw_bytes": 27261,
+      "status": "MEASURED"
+    }
+  },
+  "capacity_unit_convention": {
+    "GB": "1,000,000,000 bytes",
+    "MB": "1,000,000 bytes",
+    "recalculation": "measured MB/hour and extrapolated GB/day recomputed from persisted Parquet byte counts and the recorded actual duration using decimal SI units; bytes/event unchanged"
+  },
+  "compacted_bytes_per_channel": {
+    "basis": 0,
+    "depth": 0,
+    "funding": 0,
+    "liquidation": 0,
+    "mark_index": 0,
+    "open_interest": 0,
+    "trades": 0
+  },
+  "compaction_occurred": false,
+  "counter_mismatches": {},
+  "cpu_percent_mean": 3.0574999999999997,
+  "cpu_percent_peak": 88.3,
+  "data_health": {
+    "binance_depth_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:14:42.762379+00:00",
+      "last_message_at": "2026-09-29T20:14:42.762379+00:00",
+      "status": "stale"
+    },
+    "binance_depth_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:14:42.763730+00:00",
+      "last_message_at": "2026-09-29T20:14:42.763730+00:00",
+      "status": "stale"
+    },
+    "binance_liquidation_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:12:27.532482+00:00",
+      "last_message_at": "2026-09-29T20:12:27.532482+00:00",
+      "status": "stale"
+    },
+    "binance_liquidation_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:12:27.532482+00:00",
+      "last_message_at": "2026-09-29T20:12:27.532482+00:00",
+      "status": "stale"
+    },
+    "binance_positioning_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:13:29.791465+00:00",
+      "last_message_at": "2026-09-29T20:13:29.791465+00:00",
+      "status": "stale"
+    },
+    "binance_positioning_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:13:29.791470+00:00",
+      "last_message_at": "2026-09-29T20:13:29.791470+00:00",
+      "status": "stale"
+    },
+    "binance_trades_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:14:35.883283+00:00",
+      "last_message_at": "2026-09-29T20:14:35.883283+00:00",
+      "status": "stale"
+    },
+    "binance_trades_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:14:35.876510+00:00",
+      "last_message_at": "2026-09-29T20:14:35.876510+00:00",
+      "status": "stale"
+    }
+  },
+  "data_root": "/private/tmp/littledevil-session-b-scale-20260929-2312/data",
+  "duplicate_event_count": 0,
+  "duplicate_or_rejected_event_count": 4,
+  "end_timestamp": "2026-09-29T20:14:49.357821+00:00",
+  "events_normalized_per_channel": {
+    "basis": 0,
+    "depth": 2620,
+    "funding": 4,
+    "index": 6,
+    "mark": 6,
+    "mark_index": 6,
+    "open_interest": 4,
+    "trades": 773
+  },
+  "events_persisted_per_channel": {
+    "basis": 0,
+    "depth": 2620,
+    "funding": 4,
+    "index": 6,
+    "liquidation": 0,
+    "mark": 6,
+    "mark_index": 6,
+    "open_interest": 4,
+    "trades": 773
+  },
+  "flush_latency_ms": {
+    "max_ms": 23.9199589996133,
+    "mean_ms": 15.861056000176177,
+    "p50_ms": 23.658834001253126,
+    "p95_ms": 23.9199589996133,
+    "samples": 3
+  },
+  "http_429_count": 0,
+  "measurement_failure": null,
+  "messages_received_per_channel": {
+    "basis": 8,
+    "depth": 2620,
+    "funding": 8,
+    "index": 4,
+    "liquidation": 0,
+    "mark": 4,
+    "mark_index": 4,
+    "open_interest": 4,
+    "trades": 773
+  },
+  "parquet_files_created": 20,
+  "parquet_rows_and_bytes_per_channel": {
+    "basis": {
+      "parquet_files": 0,
+      "raw_bytes": 0,
+      "rows": 0
+    },
+    "depth": {
+      "parquet_files": 4,
+      "raw_bytes": 507439,
+      "rows": 2620
+    },
+    "funding": {
+      "parquet_files": 4,
+      "raw_bytes": 9400,
+      "rows": 4
+    },
+    "liquidation": {
+      "parquet_files": 0,
+      "raw_bytes": 0,
+      "rows": 0
+    },
+    "mark_index": {
+      "parquet_files": 4,
+      "raw_bytes": 12588,
+      "rows": 6
+    },
+    "open_interest": {
+      "parquet_files": 4,
+      "raw_bytes": 5844,
+      "rows": 4
+    },
+    "trades": {
+      "parquet_files": 4,
+      "raw_bytes": 27261,
+      "rows": 773
+    }
+  },
+  "peak_rss_mb": 89.140625,
+  "poll_error_count": 4,
+  "processing_error_count": 0,
+  "processing_lag_ms": {
+    "depth": {
+      "max_ms": 15.215,
+      "mean_ms": 0.9196114503816795,
+      "p50_ms": 0.796,
+      "p95_ms": 1.729,
+      "samples": 2620
+    },
+    "funding": {
+      "max_ms": 310.664,
+      "mean_ms": 291.63625,
+      "p50_ms": 287.47,
+      "p95_ms": 310.664,
+      "samples": 4
+    },
+    "mark_index": {
+      "max_ms": 289.525,
+      "mean_ms": 191.8125,
+      "p50_ms": 282.59499999999997,
+      "p95_ms": 289.525,
+      "samples": 6
+    },
+    "open_interest": {
+      "max_ms": 612.0889999999999,
+      "mean_ms": 522.30975,
+      "p50_ms": 602.029,
+      "p95_ms": 612.0889999999999,
+      "samples": 4
+    },
+    "trades": {
+      "max_ms": 0.217,
+      "mean_ms": 0.041120310478654595,
+      "p50_ms": 0.029,
+      "p95_ms": 0.101,
+      "samples": 773
+    }
+  },
+  "proof": "1_scale_backpressure_and_2_capacity",
+  "queue_depth": {
+    "basis": "No Recorder-owned event queue; stream callbacks are awaited inline.",
+    "current": 0,
+    "maximum": 0
+  },
+  "raw_bytes_written_per_channel": {
+    "basis": 0,
+    "depth": 507439,
+    "funding": 9400,
+    "liquidation": 0,
+    "mark_index": 12588,
+    "open_interest": 5844,
+    "trades": 27261
+  },
+  "reconnect_count": 0,
+  "recorder_sha": "8ad872ce266aa8695262f9b9bcab228289ea67e7",
+  "recovery_error_count": 0,
+  "rejected_event_count": 4,
+  "requested_duration_seconds": 120.0,
+  "rest_request_attempts": 38,
+  "rest_retry_count": 0,
+  "start_timestamp": "2026-09-29T20:12:27.513676+00:00",
+  "status": "PASS",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT"
+  ],
+  "unrecoverable_gap_count": 2,
+  "write_latency_ms": {
+    "max_ms": 0.165082999956212,
+    "mean_ms": 0.009531208989708873,
+    "p50_ms": 0.008084000000962988,
+    "p95_ms": 0.019499999325489625,
+    "samples": 3407
+  }
+}

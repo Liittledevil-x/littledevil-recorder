@@ -1,0 +1,908 @@
+{
+  "acceptance_checks": {
+    "clean_first_shutdown": true,
+    "clean_second_shutdown": true,
+    "data_health_gap_persisted_before_restart": true,
+    "data_health_recovered_for_live_channels": true,
+    "deliberate_gap_met": true,
+    "desired_subscriptions_restored": true,
+    "liquidation_gap_explicitly_unrecoverable": true,
+    "no_stream_supervisor_or_background_tasks_left": true,
+    "positioning_recovery_invoked": true,
+    "post_restart_live_trades_and_depth_persisted": true,
+    "pre_stop_market_data_independently_persisted": true,
+    "pre_stop_trade_depth_health_ok": true,
+    "trade_backfill_executed": true
+  },
+  "actual_gap_duration_seconds": 75.005046,
+  "data_health_after_second_shutdown": {
+    "binance_depth_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:45:33.181719+00:00",
+      "last_message_at": "2026-09-29T20:45:33.181719+00:00",
+      "status": "stale"
+    },
+    "binance_depth_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:45:33.183325+00:00",
+      "last_message_at": "2026-09-29T20:45:33.183325+00:00",
+      "status": "stale"
+    },
+    "binance_liquidation_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:44:06.483885+00:00",
+      "last_message_at": "2026-09-29T20:44:06.483885+00:00",
+      "status": "stale"
+    },
+    "binance_liquidation_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:44:06.483886+00:00",
+      "last_message_at": "2026-09-29T20:44:06.483886+00:00",
+      "status": "stale"
+    },
+    "binance_positioning_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:45:10.279383+00:00",
+      "last_message_at": "2026-09-29T20:45:10.279383+00:00",
+      "status": "stale"
+    },
+    "binance_positioning_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:45:10.279391+00:00",
+      "last_message_at": "2026-09-29T20:45:10.279391+00:00",
+      "status": "stale"
+    },
+    "binance_trades_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:45:23.244984+00:00",
+      "last_message_at": "2026-09-29T20:45:23.244984+00:00",
+      "status": "stale"
+    },
+    "binance_trades_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:45:22.717871+00:00",
+      "last_message_at": "2026-09-29T20:45:22.717871+00:00",
+      "status": "stale"
+    }
+  },
+  "data_health_after_shutdown": {
+    "binance_depth_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:42:42.250416+00:00",
+      "last_message_at": "2026-09-29T20:42:42.250416+00:00",
+      "status": "stale"
+    },
+    "binance_depth_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:42:42.251009+00:00",
+      "last_message_at": "2026-09-29T20:42:42.251009+00:00",
+      "status": "stale"
+    },
+    "binance_liquidation_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:41:25.730456+00:00",
+      "last_message_at": "2026-09-29T20:41:25.730456+00:00",
+      "status": "stale"
+    },
+    "binance_liquidation_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:41:25.730457+00:00",
+      "last_message_at": "2026-09-29T20:41:25.730457+00:00",
+      "status": "stale"
+    },
+    "binance_positioning_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:42:28.096433+00:00",
+      "last_message_at": "2026-09-29T20:42:28.096433+00:00",
+      "status": "stale"
+    },
+    "binance_positioning_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:42:28.096437+00:00",
+      "last_message_at": "2026-09-29T20:42:28.096437+00:00",
+      "status": "stale"
+    },
+    "binance_trades_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:42:35.339535+00:00",
+      "last_message_at": "2026-09-29T20:42:35.339535+00:00",
+      "status": "stale"
+    },
+    "binance_trades_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:42:35.335420+00:00",
+      "last_message_at": "2026-09-29T20:42:35.335420+00:00",
+      "status": "stale"
+    }
+  },
+  "data_health_before_restart": {
+    "binance_depth_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:42:42.250416+00:00",
+      "last_message_at": "2026-09-29T20:42:42.250416+00:00",
+      "status": "stale"
+    },
+    "binance_depth_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:42:42.251009+00:00",
+      "last_message_at": "2026-09-29T20:42:42.251009+00:00",
+      "status": "stale"
+    },
+    "binance_liquidation_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:41:25.730456+00:00",
+      "last_message_at": "2026-09-29T20:41:25.730456+00:00",
+      "status": "stale"
+    },
+    "binance_liquidation_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:41:25.730457+00:00",
+      "last_message_at": "2026-09-29T20:41:25.730457+00:00",
+      "status": "stale"
+    },
+    "binance_positioning_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:42:28.096433+00:00",
+      "last_message_at": "2026-09-29T20:42:28.096433+00:00",
+      "status": "stale"
+    },
+    "binance_positioning_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:42:28.096437+00:00",
+      "last_message_at": "2026-09-29T20:42:28.096437+00:00",
+      "status": "stale"
+    },
+    "binance_trades_BTCUSDT": {
+      "gap_started_at": "2026-09-29T20:42:35.339535+00:00",
+      "last_message_at": "2026-09-29T20:42:35.339535+00:00",
+      "status": "stale"
+    },
+    "binance_trades_ETHUSDT": {
+      "gap_started_at": "2026-09-29T20:42:35.335420+00:00",
+      "last_message_at": "2026-09-29T20:42:35.335420+00:00",
+      "status": "stale"
+    }
+  },
+  "data_root": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data",
+  "final_persisted_snapshot": {
+    "exact_partition_paths": [
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/BTCUSDT/2026-09-29/part-13e87e9ab8054e028a02b11f4a5705a4.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/BTCUSDT/2026-09-29/part-54779ea9f3d84158aec5899bc6131e8b.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/BTCUSDT/2026-09-29/part-e7acab12ed8c4b6d8032dc9391b784f6.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/BTCUSDT/2026-09-29/part-f5fd712d74234f98bf9bbcf545b445ec.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-04d11149025f49539c67acfc05b32cf0.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-149612b979fd4128acca48f34c636481.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-71b44799f9f54d29849e6410be118fbe.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-d62c42ffcf5b45b199a28446932c59e8.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-1f36b0484ac944dfa2d5c6ec696eb98e.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-7756a456dd344075b863c634735cd7c3.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-8359eb7b51d34c1a9d28482d12de555e.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-9f7e7ebf21ad4db485677301c284e01f.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/ETHUSDT/2026-09-29/part-2ad80763e43a4f25818e7c4a72796554.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/ETHUSDT/2026-09-29/part-52a9d5291a61460789c42aa3c3cd5ea6.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/ETHUSDT/2026-09-29/part-d9834d8491a1464dae3ad12761eefff9.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/ETHUSDT/2026-09-29/part-ee6d633aab734864a82386cb07e04cc9.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-5a8f9e1272264f3d95c0114a37fcc94a.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-83c99af46663430a889227ac318e5f32.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-b41b8417222544828e2f3770c03c8064.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-c4db9016673e4a5db25297642e82dff7.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/ETHUSDT/2026-09-29/part-65d83d4c2bf34fcba53be3ddefbc2d04.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/ETHUSDT/2026-09-29/part-6eab2b777ab241e6b5bf586b3dc4480a.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/ETHUSDT/2026-09-29/part-82cdbc3a54684984be8d2db84170b53f.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/ETHUSDT/2026-09-29/part-db61d6d431b7432b9e1d047323c53f55.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-1807f174ef8540d396cbe4f615ba36b8.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-929a07804bab4bfda1ddabcc0f517343.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-e70d79269a914ec4b9c4b02af1812159.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-f277d1fc1d444602977dd8d493febfbe.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-55296cf0d60b4bba9cb6332a6a2d4c14.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-5fce01c0000048b38051aa17891fe476.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-813606ee168a424ca380f4055e5672c5.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-f1acf3683dd94fdeada5f6de20529b34.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-0fbccf0b34434e6cb77513d2310f4299.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-356124452a464f669a06194604ebcb4d.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-821d88175c96478c931e0559f243cb10.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-9a578aab218b44d597f3b4e22d951ea8.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-d2e56533d51744af866d5131c1d821ba.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-3002d37cd22e4ced93154e9ff7c6028b.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-67fe38b866f54b8e98215267576b510e.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-6cd33250bf744c18bab705bfe920a921.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-71016db553d64a20b89e6a5484d304c4.parquet",
+      "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-d5d6f6f1f8824102867226380f2fdfb4.parquet"
+    ],
+    "per_channel": {
+      "basis": {
+        "newest_partition_path": null,
+        "newest_ts_exchange": null,
+        "parquet_files": 0,
+        "raw_bytes": 0,
+        "rows": 0
+      },
+      "depth": {
+        "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-d62c42ffcf5b45b199a28446932c59e8.parquet",
+        "newest_ts_exchange": "2026-09-29T20:45:33.115000+00:00",
+        "parquet_files": 8,
+        "raw_bytes": 535733,
+        "rows": 3033
+      },
+      "funding": {
+        "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-1f36b0484ac944dfa2d5c6ec696eb98e.parquet",
+        "newest_ts_exchange": "2026-09-29T16:00:00+00:00",
+        "parquet_files": 8,
+        "raw_bytes": 18800,
+        "rows": 8
+      },
+      "liquidation": {
+        "newest_partition_path": null,
+        "newest_ts_exchange": null,
+        "parquet_files": 0,
+        "raw_bytes": 0,
+        "rows": 0
+      },
+      "mark_index": {
+        "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-c4db9016673e4a5db25297642e82dff7.parquet",
+        "newest_ts_exchange": "2026-09-29T20:45:09.002000+00:00",
+        "parquet_files": 8,
+        "raw_bytes": 25059,
+        "rows": 15
+      },
+      "open_interest": {
+        "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-929a07804bab4bfda1ddabcc0f517343.parquet",
+        "newest_ts_exchange": "2026-09-29T20:45:02.515000+00:00",
+        "parquet_files": 8,
+        "raw_bytes": 11688,
+        "rows": 8
+      },
+      "trades": {
+        "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-821d88175c96478c931e0559f243cb10.parquet",
+        "newest_ts_exchange": "2026-09-29T20:45:23.177000+00:00",
+        "parquet_files": 10,
+        "raw_bytes": 48214,
+        "rows": 1105
+      }
+    },
+    "post_restart_live_rows": {
+      "basis": 0,
+      "depth": 1609,
+      "funding": 0,
+      "liquidation": 0,
+      "mark_index": 4,
+      "open_interest": 2,
+      "trades": 379
+    },
+    "recovered_trade_rows_by_ts_received_equals_ts_exchange": 542,
+    "source_counts": {
+      "basis": {},
+      "depth": {},
+      "funding": {
+        "binance_usdm": 8
+      },
+      "liquidation": {},
+      "mark_index": {
+        "binance_usdm": 8,
+        "binance_usdm_recovered_indexKlines_1m": 4,
+        "binance_usdm_recovered_markKlines_1m": 3
+      },
+      "open_interest": {
+        "binance_usdm": 8
+      },
+      "trades": {}
+    }
+  },
+  "first_process": {
+    "actual_uptime_seconds_before_stop": 65.259247,
+    "data_health_before_shutdown": {
+      "binance_depth_BTCUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:42:28.879213+00:00",
+        "status": "ok"
+      },
+      "binance_depth_ETHUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:42:28.880628+00:00",
+        "status": "ok"
+      },
+      "binance_liquidation_BTCUSDT": {
+        "gap_started_at": "2026-09-29T20:41:25.730456+00:00",
+        "last_message_at": "2026-09-29T20:41:25.730456+00:00",
+        "status": "stale"
+      },
+      "binance_liquidation_ETHUSDT": {
+        "gap_started_at": "2026-09-29T20:41:25.730457+00:00",
+        "last_message_at": "2026-09-29T20:41:25.730457+00:00",
+        "status": "stale"
+      },
+      "binance_positioning_BTCUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:42:28.096433+00:00",
+        "status": "ok"
+      },
+      "binance_positioning_ETHUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:42:28.096437+00:00",
+        "status": "ok"
+      },
+      "binance_trades_BTCUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:42:27.343968+00:00",
+        "status": "ok"
+      },
+      "binance_trades_ETHUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:42:22.681207+00:00",
+        "status": "ok"
+      }
+    },
+    "desired_subscriptions_before_shutdown": {
+      "desired_symbols": {
+        "depth": [
+          "BTCUSDT",
+          "ETHUSDT"
+        ],
+        "liquidation": [
+          "BTCUSDT",
+          "ETHUSDT"
+        ],
+        "positioning": [
+          "BTCUSDT",
+          "ETHUSDT"
+        ],
+        "trades": [
+          "BTCUSDT",
+          "ETHUSDT"
+        ]
+      },
+      "path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/_local/desired_subscriptions.json",
+      "states": {
+        "depth": {
+          "BTCUSDT": "subscribed",
+          "ETHUSDT": "subscribed"
+        },
+        "liquidation": {
+          "BTCUSDT": "pending",
+          "ETHUSDT": "pending"
+        },
+        "positioning": {
+          "BTCUSDT": "pending",
+          "ETHUSDT": "pending"
+        },
+        "trades": {
+          "BTCUSDT": "subscribed",
+          "ETHUSDT": "subscribed"
+        }
+      }
+    },
+    "exit_code": 0,
+    "independent_pre_stop_verification_timestamp": "2026-09-29T20:42:30.813567+00:00",
+    "log_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/logs/recorder_before_restart.log",
+    "persisted_after_clean_stop": {
+      "exact_partition_paths": [
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/BTCUSDT/2026-09-29/part-e7acab12ed8c4b6d8032dc9391b784f6.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/BTCUSDT/2026-09-29/part-f5fd712d74234f98bf9bbcf545b445ec.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-149612b979fd4128acca48f34c636481.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-71b44799f9f54d29849e6410be118fbe.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-7756a456dd344075b863c634735cd7c3.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-9f7e7ebf21ad4db485677301c284e01f.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/ETHUSDT/2026-09-29/part-2ad80763e43a4f25818e7c4a72796554.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/ETHUSDT/2026-09-29/part-ee6d633aab734864a82386cb07e04cc9.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-5a8f9e1272264f3d95c0114a37fcc94a.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-b41b8417222544828e2f3770c03c8064.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/ETHUSDT/2026-09-29/part-6eab2b777ab241e6b5bf586b3dc4480a.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/ETHUSDT/2026-09-29/part-82cdbc3a54684984be8d2db84170b53f.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-1807f174ef8540d396cbe4f615ba36b8.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-e70d79269a914ec4b9c4b02af1812159.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-813606ee168a424ca380f4055e5672c5.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-f1acf3683dd94fdeada5f6de20529b34.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-0fbccf0b34434e6cb77513d2310f4299.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-9a578aab218b44d597f3b4e22d951ea8.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-3002d37cd22e4ced93154e9ff7c6028b.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-67fe38b866f54b8e98215267576b510e.parquet"
+      ],
+      "per_channel": {
+        "basis": {
+          "newest_partition_path": null,
+          "newest_ts_exchange": null,
+          "parquet_files": 0,
+          "raw_bytes": 0,
+          "rows": 0
+        },
+        "depth": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-149612b979fd4128acca48f34c636481.parquet",
+          "newest_ts_exchange": "2026-09-29T20:42:42.115000+00:00",
+          "parquet_files": 4,
+          "raw_bytes": 231097,
+          "rows": 1424
+        },
+        "funding": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-7756a456dd344075b863c634735cd7c3.parquet",
+          "newest_ts_exchange": "2026-09-29T16:00:00+00:00",
+          "parquet_files": 4,
+          "raw_bytes": 9400,
+          "rows": 4
+        },
+        "liquidation": {
+          "newest_partition_path": null,
+          "newest_ts_exchange": null,
+          "parquet_files": 0,
+          "raw_bytes": 0,
+          "rows": 0
+        },
+        "mark_index": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-b41b8417222544828e2f3770c03c8064.parquet",
+          "newest_ts_exchange": "2026-09-29T20:42:27+00:00",
+          "parquet_files": 4,
+          "raw_bytes": 12300,
+          "rows": 4
+        },
+        "open_interest": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-1807f174ef8540d396cbe4f615ba36b8.parquet",
+          "newest_ts_exchange": "2026-09-29T20:42:24.505000+00:00",
+          "parquet_files": 4,
+          "raw_bytes": 5844,
+          "rows": 4
+        },
+        "trades": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-9a578aab218b44d597f3b4e22d951ea8.parquet",
+          "newest_ts_exchange": "2026-09-29T20:42:35.275000+00:00",
+          "parquet_files": 4,
+          "raw_bytes": 13576,
+          "rows": 184
+        }
+      },
+      "post_restart_live_rows": {
+        "basis": 0,
+        "depth": 0,
+        "funding": 0,
+        "liquidation": 0,
+        "mark_index": 0,
+        "open_interest": 0,
+        "trades": 0
+      },
+      "recovered_trade_rows_by_ts_received_equals_ts_exchange": 0,
+      "source_counts": {
+        "basis": {},
+        "depth": {},
+        "funding": {
+          "binance_usdm": 4
+        },
+        "liquidation": {},
+        "mark_index": {
+          "binance_usdm": 4
+        },
+        "open_interest": {
+          "binance_usdm": 4
+        },
+        "trades": {}
+      }
+    },
+    "persisted_before_stop": {
+      "exact_partition_paths": [
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/BTCUSDT/2026-09-29/part-e7acab12ed8c4b6d8032dc9391b784f6.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-71b44799f9f54d29849e6410be118fbe.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-9f7e7ebf21ad4db485677301c284e01f.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/ETHUSDT/2026-09-29/part-ee6d633aab734864a82386cb07e04cc9.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-5a8f9e1272264f3d95c0114a37fcc94a.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/ETHUSDT/2026-09-29/part-82cdbc3a54684984be8d2db84170b53f.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-e70d79269a914ec4b9c4b02af1812159.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-f1acf3683dd94fdeada5f6de20529b34.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-0fbccf0b34434e6cb77513d2310f4299.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-3002d37cd22e4ced93154e9ff7c6028b.parquet"
+      ],
+      "per_channel": {
+        "basis": {
+          "newest_partition_path": null,
+          "newest_ts_exchange": null,
+          "parquet_files": 0,
+          "raw_bytes": 0,
+          "rows": 0
+        },
+        "depth": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-71b44799f9f54d29849e6410be118fbe.parquet",
+          "newest_ts_exchange": "2026-09-29T20:42:25.615000+00:00",
+          "parquet_files": 2,
+          "raw_bytes": 167001,
+          "rows": 1098
+        },
+        "funding": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-9f7e7ebf21ad4db485677301c284e01f.parquet",
+          "newest_ts_exchange": "2026-09-29T16:00:00+00:00",
+          "parquet_files": 2,
+          "raw_bytes": 4700,
+          "rows": 2
+        },
+        "liquidation": {
+          "newest_partition_path": null,
+          "newest_ts_exchange": null,
+          "parquet_files": 0,
+          "raw_bytes": 0,
+          "rows": 0
+        },
+        "mark_index": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-5a8f9e1272264f3d95c0114a37fcc94a.parquet",
+          "newest_ts_exchange": "2026-09-29T20:41:26+00:00",
+          "parquet_files": 2,
+          "raw_bytes": 6150,
+          "rows": 2
+        },
+        "open_interest": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-f1acf3683dd94fdeada5f6de20529b34.parquet",
+          "newest_ts_exchange": "2026-09-29T20:41:23.067000+00:00",
+          "parquet_files": 2,
+          "raw_bytes": 2922,
+          "rows": 2
+        },
+        "trades": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-0fbccf0b34434e6cb77513d2310f4299.parquet",
+          "newest_ts_exchange": "2026-09-29T20:42:24.785000+00:00",
+          "parquet_files": 2,
+          "raw_bytes": 8549,
+          "rows": 162
+        }
+      },
+      "post_restart_live_rows": {
+        "basis": 0,
+        "depth": 0,
+        "funding": 0,
+        "liquidation": 0,
+        "mark_index": 0,
+        "open_interest": 0,
+        "trades": 0
+      },
+      "recovered_trade_rows_by_ts_received_equals_ts_exchange": 0,
+      "source_counts": {
+        "basis": {},
+        "depth": {},
+        "funding": {
+          "binance_usdm": 2
+        },
+        "liquidation": {},
+        "mark_index": {
+          "binance_usdm": 2
+        },
+        "open_interest": {
+          "binance_usdm": 2
+        },
+        "trades": {}
+      }
+    },
+    "pid": 81770,
+    "process_alive_after_first_stop": false,
+    "start_timestamp": "2026-09-29T20:41:25.554300+00:00",
+    "stop_requested_timestamp": "2026-09-29T20:42:30.814300+00:00",
+    "stop_timestamp": "2026-09-29T20:42:51.169534+00:00",
+    "task_census": {
+      "after_shutdown": {
+        "background_tasks": 0,
+        "stream_supervisor_tasks": 0
+      },
+      "before_shutdown": {
+        "background_tasks": 10,
+        "stream_supervisor_tasks": 2
+      }
+    }
+  },
+  "liquidation_gap": {
+    "capability": "unrecoverable",
+    "health_after_restart_recovery": {
+      "binance_liquidation_BTCUSDT": {
+        "gap_started_at": "2026-09-29T20:44:06.483885+00:00",
+        "last_message_at": "2026-09-29T20:44:06.483885+00:00",
+        "status": "stale"
+      },
+      "binance_liquidation_ETHUSDT": {
+        "gap_started_at": "2026-09-29T20:44:06.483886+00:00",
+        "last_message_at": "2026-09-29T20:44:06.483886+00:00",
+        "status": "stale"
+      }
+    },
+    "health_after_shutdown": {
+      "binance_liquidation_BTCUSDT": {
+        "gap_started_at": "2026-09-29T20:41:25.730456+00:00",
+        "last_message_at": "2026-09-29T20:41:25.730456+00:00",
+        "status": "stale"
+      },
+      "binance_liquidation_ETHUSDT": {
+        "gap_started_at": "2026-09-29T20:41:25.730457+00:00",
+        "last_message_at": "2026-09-29T20:41:25.730457+00:00",
+        "status": "stale"
+      }
+    },
+    "health_before_restart": {
+      "binance_liquidation_BTCUSDT": {
+        "gap_started_at": "2026-09-29T20:41:25.730456+00:00",
+        "last_message_at": "2026-09-29T20:41:25.730456+00:00",
+        "status": "stale"
+      },
+      "binance_liquidation_ETHUSDT": {
+        "gap_started_at": "2026-09-29T20:41:25.730457+00:00",
+        "last_message_at": "2026-09-29T20:41:25.730457+00:00",
+        "status": "stale"
+      }
+    },
+    "unrecoverable_log_count": 4
+  },
+  "minimum_deliberate_gap_seconds": 75.0,
+  "proof": "3_actual_restart_recovery_lifecycle",
+  "recorder_sha": "e6800532bfd8c2f8a8f840bc5c81c8f2ffc313ef",
+  "restart_recovery_logs": {
+    "http_400_count": 0,
+    "http_429_count": 0,
+    "liquidation_unrecoverable_log_count": 4,
+    "log_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/logs/recorder_after_restart.log",
+    "positioning_gap_attempt_log_count": 4,
+    "positioning_recovered_rows_by_channel": {
+      "basis": 0,
+      "funding": 0,
+      "mark_index": 7,
+      "open_interest": 0
+    },
+    "trade_backfill_rows_by_symbol": {
+      "BTCUSDT": 310,
+      "ETHUSDT": 239
+    },
+    "trade_backfill_total_rows": 549
+  },
+  "restart_recovery_provenance": {
+    "logged_trade_backfill_rows_by_symbol": {
+      "BTCUSDT": 310,
+      "ETHUSDT": 239
+    },
+    "logged_trade_backfill_rows_total": 549,
+    "persisted_backfill_rows_before_restart_by_timestamp_provenance": 542,
+    "positioning_parquet_source_counts": {
+      "basis": {},
+      "funding": {
+        "binance_usdm": 8
+      },
+      "mark_index": {
+        "binance_usdm": 8,
+        "binance_usdm_recovered_indexKlines_1m": 4,
+        "binance_usdm_recovered_markKlines_1m": 3
+      },
+      "open_interest": {
+        "binance_usdm": 8
+      }
+    },
+    "post_restart_stream_trade_rows_by_received_exchange_timestamp_difference": 372,
+    "post_restart_timestamp_equal_backfill_rows": 7,
+    "recovered_trade_rows_by_ts_received_equals_ts_exchange": 542,
+    "trade_row_classification_note": "Parquet audit: 1,105 total rows = 184 pre-stop stream rows + 549 startup REST-backfill rows + 372 post-restart stream rows. Of the 549 REST rows, 542 have exchange timestamps before restart and 7 after restart; the original timestamp-only post_restart_live_rows value 379 includes those 7 REST rows."
+  },
+  "restart_timestamp": "2026-09-29T20:44:06.174580+00:00",
+  "second_process": {
+    "actual_uptime_before_verification_seconds": 68.755752,
+    "data_health_after_recovery": {
+      "binance_depth_BTCUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:45:14.379765+00:00",
+        "status": "ok"
+      },
+      "binance_depth_ETHUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:45:14.381683+00:00",
+        "status": "ok"
+      },
+      "binance_liquidation_BTCUSDT": {
+        "gap_started_at": "2026-09-29T20:44:06.483885+00:00",
+        "last_message_at": "2026-09-29T20:44:06.483885+00:00",
+        "status": "stale"
+      },
+      "binance_liquidation_ETHUSDT": {
+        "gap_started_at": "2026-09-29T20:44:06.483886+00:00",
+        "last_message_at": "2026-09-29T20:44:06.483886+00:00",
+        "status": "stale"
+      },
+      "binance_positioning_BTCUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:45:10.279383+00:00",
+        "status": "ok"
+      },
+      "binance_positioning_ETHUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:45:10.279391+00:00",
+        "status": "ok"
+      },
+      "binance_trades_BTCUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:45:14.149005+00:00",
+        "status": "ok"
+      },
+      "binance_trades_ETHUSDT": {
+        "gap_started_at": null,
+        "last_message_at": "2026-09-29T20:45:14.303424+00:00",
+        "status": "ok"
+      }
+    },
+    "exit_code": 0,
+    "log_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/logs/recorder_after_restart.log",
+    "persisted_after_restart": {
+      "exact_partition_paths": [
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/BTCUSDT/2026-09-29/part-54779ea9f3d84158aec5899bc6131e8b.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/BTCUSDT/2026-09-29/part-e7acab12ed8c4b6d8032dc9391b784f6.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/BTCUSDT/2026-09-29/part-f5fd712d74234f98bf9bbcf545b445ec.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-04d11149025f49539c67acfc05b32cf0.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-149612b979fd4128acca48f34c636481.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-71b44799f9f54d29849e6410be118fbe.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-1f36b0484ac944dfa2d5c6ec696eb98e.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-7756a456dd344075b863c634735cd7c3.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-9f7e7ebf21ad4db485677301c284e01f.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/ETHUSDT/2026-09-29/part-2ad80763e43a4f25818e7c4a72796554.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/ETHUSDT/2026-09-29/part-52a9d5291a61460789c42aa3c3cd5ea6.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/ETHUSDT/2026-09-29/part-ee6d633aab734864a82386cb07e04cc9.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-5a8f9e1272264f3d95c0114a37fcc94a.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-83c99af46663430a889227ac318e5f32.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-b41b8417222544828e2f3770c03c8064.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/ETHUSDT/2026-09-29/part-65d83d4c2bf34fcba53be3ddefbc2d04.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/ETHUSDT/2026-09-29/part-6eab2b777ab241e6b5bf586b3dc4480a.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/ETHUSDT/2026-09-29/part-82cdbc3a54684984be8d2db84170b53f.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-1807f174ef8540d396cbe4f615ba36b8.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-e70d79269a914ec4b9c4b02af1812159.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-f277d1fc1d444602977dd8d493febfbe.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-5fce01c0000048b38051aa17891fe476.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-813606ee168a424ca380f4055e5672c5.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/ETHUSDT/2026-09-29/part-f1acf3683dd94fdeada5f6de20529b34.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-0fbccf0b34434e6cb77513d2310f4299.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-356124452a464f669a06194604ebcb4d.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-9a578aab218b44d597f3b4e22d951ea8.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/BTCUSDT/2026-09-29/part-d2e56533d51744af866d5131c1d821ba.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-3002d37cd22e4ced93154e9ff7c6028b.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-67fe38b866f54b8e98215267576b510e.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-71016db553d64a20b89e6a5484d304c4.parquet",
+        "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-d5d6f6f1f8824102867226380f2fdfb4.parquet"
+      ],
+      "per_channel": {
+        "basis": {
+          "newest_partition_path": null,
+          "newest_ts_exchange": null,
+          "parquet_files": 0,
+          "raw_bytes": 0,
+          "rows": 0
+        },
+        "depth": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/depth/ETHUSDT/2026-09-29/part-04d11149025f49539c67acfc05b32cf0.parquet",
+          "newest_ts_exchange": "2026-09-29T20:45:08.015000+00:00",
+          "parquet_files": 6,
+          "raw_bytes": 425327,
+          "rows": 2536
+        },
+        "funding": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/funding/BTCUSDT/2026-09-29/part-1f36b0484ac944dfa2d5c6ec696eb98e.parquet",
+          "newest_ts_exchange": "2026-09-29T16:00:00+00:00",
+          "parquet_files": 6,
+          "raw_bytes": 14100,
+          "rows": 6
+        },
+        "liquidation": {
+          "newest_partition_path": null,
+          "newest_ts_exchange": null,
+          "parquet_files": 0,
+          "raw_bytes": 0,
+          "rows": 0
+        },
+        "mark_index": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/mark_index/BTCUSDT/2026-09-29/part-83c99af46663430a889227ac318e5f32.parquet",
+          "newest_ts_exchange": "2026-09-29T20:44:08.001000+00:00",
+          "parquet_files": 6,
+          "raw_bytes": 18909,
+          "rows": 13
+        },
+        "open_interest": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/open_interest/BTCUSDT/2026-09-29/part-f277d1fc1d444602977dd8d493febfbe.parquet",
+          "newest_ts_exchange": "2026-09-29T20:44:04.578000+00:00",
+          "parquet_files": 6,
+          "raw_bytes": 8766,
+          "rows": 6
+        },
+        "trades": {
+          "newest_partition_path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/trades/ETHUSDT/2026-09-29/part-d5d6f6f1f8824102867226380f2fdfb4.parquet",
+          "newest_ts_exchange": "2026-09-29T20:45:08.087000+00:00",
+          "parquet_files": 8,
+          "raw_bytes": 40917,
+          "rows": 993
+        }
+      },
+      "post_restart_live_rows": {
+        "basis": 0,
+        "depth": 1112,
+        "funding": 0,
+        "liquidation": 0,
+        "mark_index": 2,
+        "open_interest": 0,
+        "trades": 267
+      },
+      "recovered_trade_rows_by_ts_received_equals_ts_exchange": 542,
+      "source_counts": {
+        "basis": {},
+        "depth": {},
+        "funding": {
+          "binance_usdm": 6
+        },
+        "liquidation": {},
+        "mark_index": {
+          "binance_usdm": 6,
+          "binance_usdm_recovered_indexKlines_1m": 4,
+          "binance_usdm_recovered_markKlines_1m": 3
+        },
+        "open_interest": {
+          "binance_usdm": 6
+        },
+        "trades": {}
+      }
+    },
+    "pid": 82724,
+    "process_alive_after_stop": false,
+    "restored_subscriptions": {
+      "desired_symbols": {
+        "depth": [
+          "BTCUSDT",
+          "ETHUSDT"
+        ],
+        "liquidation": [
+          "BTCUSDT",
+          "ETHUSDT"
+        ],
+        "positioning": [
+          "BTCUSDT",
+          "ETHUSDT"
+        ],
+        "trades": [
+          "BTCUSDT",
+          "ETHUSDT"
+        ]
+      },
+      "path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/_local/desired_subscriptions.json",
+      "states": {
+        "depth": {
+          "BTCUSDT": "subscribed",
+          "ETHUSDT": "subscribed"
+        },
+        "liquidation": {
+          "BTCUSDT": "pending",
+          "ETHUSDT": "pending"
+        },
+        "positioning": {
+          "BTCUSDT": "pending",
+          "ETHUSDT": "pending"
+        },
+        "trades": {
+          "BTCUSDT": "subscribed",
+          "ETHUSDT": "subscribed"
+        }
+      }
+    },
+    "start_timestamp": "2026-09-29T20:44:06.174580+00:00",
+    "stop_requested_timestamp": "2026-09-29T20:45:14.930371+00:00",
+    "stop_timestamp": "2026-09-29T20:45:42.308258+00:00",
+    "task_census": {
+      "after_shutdown": {
+        "background_tasks": 0,
+        "stream_supervisor_tasks": 0
+      },
+      "before_shutdown": {
+        "background_tasks": 10,
+        "stream_supervisor_tasks": 2
+      }
+    }
+  },
+  "status": "PASS",
+  "subscriptions_requested_for_restart": {
+    "desired_symbols": {
+      "depth": [
+        "BTCUSDT",
+        "ETHUSDT"
+      ],
+      "liquidation": [
+        "BTCUSDT",
+        "ETHUSDT"
+      ],
+      "positioning": [
+        "BTCUSDT",
+        "ETHUSDT"
+      ],
+      "trades": [
+        "BTCUSDT",
+        "ETHUSDT"
+      ]
+    },
+    "path": "/private/tmp/littledevil-session-b-restart-20260929-2341d/data/_local/desired_subscriptions.json",
+    "states": {
+      "depth": {
+        "BTCUSDT": "subscribed",
+        "ETHUSDT": "subscribed"
+      },
+      "liquidation": {
+        "BTCUSDT": "pending",
+        "ETHUSDT": "pending"
+      },
+      "positioning": {
+        "BTCUSDT": "pending",
+        "ETHUSDT": "pending"
+      },
+      "trades": {
+        "BTCUSDT": "subscribed",
+        "ETHUSDT": "subscribed"
+      }
+    }
+  },
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT"
+  ]
+}
