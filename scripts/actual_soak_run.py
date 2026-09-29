@@ -81,9 +81,12 @@ class Metrics:
     def received(self, channel: str, count: int = 1) -> None:
         self.messages[channel] += count
 
-    def rest_request(self, url: str, *, status: int | None, failed: bool = False) -> None:
+    def rest_request(
+        self, url: str, *, status: int | None, failed: bool = False,
+        identity: str | None = None,
+    ) -> None:
         self.rest_attempts += 1
-        key = url
+        key = identity or url
         now = time.monotonic()
         previous_failure = self._failed_rest.get(key)
         if previous_failure is not None and now - previous_failure <= 15:
@@ -141,13 +144,18 @@ class ObservedWriter:
         self._metrics = metrics
 
     def __getattr__(self, name: str):
+        channel = self._METHODS.get(name)
+        if channel is not None:
+            def observed_write(*args, **kwargs):
+                return self._write(name, channel, *args, **kwargs)
+            return observed_write
         return getattr(self._inner, name)
 
     def _write(self, method: str, channel: str, *args, **kwargs):
         started = time.perf_counter()
         received_at = kwargs.get("ts_received")
+        self._metrics.normalized[channel] += 1
         if channel == "trades":
-            self._metrics.normalized[channel] += 1
             symbol = args[0] if args else kwargs.get("symbol")
             trade_id = kwargs.get("trade_id")
             if trade_id in self._metrics._trade_ids[symbol]:
@@ -156,8 +164,6 @@ class ObservedWriter:
                 self._metrics._trade_ids[symbol].add(trade_id)
         try:
             result = getattr(self._inner, method)(*args, **kwargs)
-            if channel != "trades":
-                self._metrics.normalized[channel] += 1
             return result
         except Exception:
             self._metrics.processing_errors += 1
@@ -204,24 +210,65 @@ class RestObserver:
         original_httpx_get = self._httpx_get
         original_aiohttp_request = self._aiohttp_request
 
-        async def observed_httpx_get(client, url, *args, **kwargs):
+        class ObservedHTTPXRequest:
+            def __init__(self, request, url_text: str, identity: str) -> None:
+                self.request = request
+                self.url_text = url_text
+                self.identity = identity
+
+            def _record(self, response) -> None:
+                metrics.rest_request(
+                    self.url_text, status=response.status_code, identity=self.identity
+                )
+
+            def __await__(self):
+                async def await_response():
+                    try:
+                        response = await self.request
+                    except Exception:
+                        metrics.rest_request(
+                            self.url_text, status=None, failed=True, identity=self.identity
+                        )
+                        raise
+                    self._record(response)
+                    return response
+                return await_response().__await__()
+
+            async def __aenter__(self):
+                try:
+                    response = await self.request.__aenter__()
+                except Exception:
+                    metrics.rest_request(
+                        self.url_text, status=None, failed=True, identity=self.identity
+                    )
+                    raise
+                self._record(response)
+                return response
+
+            async def __aexit__(self, *exc_info):
+                return await self.request.__aexit__(*exc_info)
+
+        def observed_httpx_get(client, url, *args, **kwargs):
             url_text = str(url)
-            try:
-                response = await original_httpx_get(client, url, *args, **kwargs)
-            except Exception:
-                metrics.rest_request(url_text, status=None, failed=True)
-                raise
-            metrics.rest_request(url_text, status=response.status_code)
-            return response
+            request = original_httpx_get(client, url, *args, **kwargs)
+            params = kwargs.get("params")
+            identity = url_text
+            if params:
+                identity += "?" + json.dumps(params, sort_keys=True, default=str)
+            return ObservedHTTPXRequest(request, url_text, identity)
 
         async def observed_aiohttp_request(session, method, url, *args, **kwargs):
             url_text = str(url)
+            params = kwargs.get("params")
+            identity = url_text
+            if params:
+                identity += "?" + json.dumps(params, sort_keys=True, default=str)
             try:
                 response = await original_aiohttp_request(session, method, url, *args, **kwargs)
             except Exception:
-                metrics.rest_request(url_text, status=None, failed=True)
+                metrics.rest_request(url_text, status=None, failed=True, identity=identity)
                 raise
-            metrics.rest_request(url_text, status=response.status)
+            metrics.rest_request(url_text, status=response.status, identity=identity)
             return response
 
         httpx.AsyncClient.get = observed_httpx_get
@@ -346,7 +393,6 @@ async def run_soak(args: argparse.Namespace) -> dict:
     async def observed_liquidations(on_liquidation, *, stop_event=None):
         async def on_observed_liquidation(event):
             metrics.received("liquidation")
-            metrics.normalized["liquidation"] += 1
             try:
                 await on_liquidation(event)
             except Exception:
@@ -392,7 +438,7 @@ async def run_soak(args: argparse.Namespace) -> dict:
 
     end_at = utc_now()
     elapsed = (end_at - start_at).total_seconds()
-    data, physical_rows = metrics.parquet_counts(root)
+    data, _ = metrics.parquet_counts(root)
     health = await read_health(symbols)
     unrecoverable_gaps = sum(
         1 for channel, value in health.items()
@@ -404,6 +450,20 @@ async def run_soak(args: argparse.Namespace) -> dict:
             metrics.normalized.setdefault(channel, 0)
         metrics.messages.setdefault(channel, 0)
     persisted = {channel: data[channel]["rows"] for channel in PHYSICAL_CHANNELS}
+    received_report = dict(metrics.messages)
+    normalized_report = dict(metrics.normalized)
+    for field in ("mark", "index"):
+        received_report[field] = metrics.messages["mark_index"]
+        normalized_report[field] = metrics.normalized["mark_index"]
+        persisted[field] = persisted["mark_index"]
+    mismatched_counters = {
+        channel: {
+            "normalized": metrics.normalized[channel],
+            "persisted": persisted[channel],
+        }
+        for channel in PHYSICAL_CHANNELS
+        if persisted[channel] > metrics.normalized[channel]
+    }
     capacity = {
         channel: capacity_entry(
             data[channel]["rows"], data[channel]["raw_bytes"], elapsed
@@ -430,8 +490,8 @@ async def run_soak(args: argparse.Namespace) -> dict:
         "actual_duration_seconds": elapsed,
         "symbols": symbols,
         "data_root": str(root),
-        "messages_received_per_channel": dict(metrics.messages),
-        "events_normalized_per_channel": dict(metrics.normalized),
+        "messages_received_per_channel": received_report,
+        "events_normalized_per_channel": normalized_report,
         "events_persisted_per_channel": persisted,
         "queue_depth": {
             "current": 0,
@@ -448,6 +508,7 @@ async def run_soak(args: argparse.Namespace) -> dict:
         "rest_retry_count": metrics.rest_retries,
         "http_429_count": metrics.http_429,
         "duplicate_or_rejected_event_count": metrics.duplicates,
+        "processing_error_count": metrics.processing_errors,
         "unrecoverable_gap_count": unrecoverable_gaps,
         "data_health": health,
         "peak_rss_mb": metrics.peak_rss_mb,
@@ -461,8 +522,12 @@ async def run_soak(args: argparse.Namespace) -> dict:
         "parquet_files_created": all_files,
         "parquet_rows_and_bytes_per_channel": data,
         "capacity": capacity,
+        "counter_mismatches": mismatched_counters,
         "measurement_failure": failure,
-        "status": "PASS" if elapsed >= args.duration_seconds and failure is None else "FAIL",
+        "status": "PASS" if (
+            elapsed >= args.duration_seconds and failure is None
+            and not mismatched_counters and metrics.processing_errors == 0
+        ) else "FAIL",
     }
     return report
 

@@ -142,6 +142,8 @@ async def recover_and_run(
     for symbol in subscriptions.desired_symbols("liquidation"):
         health.register(f"binance_liquidation_{symbol}")
 
+    handled_recovery_parts: set[tuple[str, str, datetime, str]] = set()
+
     async with httpx.AsyncClient(timeout=10.0) as client:
         today = datetime.now(UTC).date()
         for symbol in trade_symbols:
@@ -225,7 +227,10 @@ async def recover_and_run(
             health.sweep()
 
             # Attempt gap recovery from detected Data Health gaps
-            recovery_results = await orchestrate_recovery_from_gaps(health, writer, conn, client)
+            recovery_results = await orchestrate_recovery_from_gaps(
+                health, writer, conn, client,
+                handled_recovery_parts=handled_recovery_parts,
+            )
             if recovery_results:
                 for result in recovery_results:
                     if result.errors:

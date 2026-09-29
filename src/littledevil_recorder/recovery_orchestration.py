@@ -11,7 +11,7 @@ during polling.
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime
 
 import httpx
@@ -36,6 +36,8 @@ async def orchestrate_recovery_from_gaps(
     writer: ParquetWriter,
     conn: psycopg.AsyncConnection,
     client: httpx.AsyncClient,
+    *,
+    handled_recovery_parts: set[tuple[str, str, datetime, str]] | None = None,
 ) -> list[RecoveryResult]:
     """Query Data Health for unresolved gaps and invoke recovery adapters.
 
@@ -47,6 +49,7 @@ async def orchestrate_recovery_from_gaps(
     Returns: list of RecoveryResult objects (empty if no gaps).
     """
     results: list[RecoveryResult] = []
+    handled = handled_recovery_parts if handled_recovery_parts is not None else set()
 
     try:
         async with conn.cursor() as cur:
@@ -91,7 +94,10 @@ async def orchestrate_recovery_from_gaps(
             continue
 
         if capability == "unrecoverable":
-            logger.info("gap on %s/%s is unrecoverable (sampled stream); gap remains", channel_type, symbol)
+            key = (channel_type, symbol, gap_started_at, "unrecoverable")
+            if key not in handled:
+                logger.info("gap on %s/%s is unrecoverable (sampled stream); gap remains", channel_type, symbol)
+                handled.add(key)
             continue
 
         # Determine recovery end time: now, or last_message_at if gap is recent
@@ -103,46 +109,77 @@ async def orchestrate_recovery_from_gaps(
             logger.warning("gap on %s/%s is %d days old; exceeds retention window", channel_type, symbol, gap_age_days)
             continue
 
+        part_names = {
+            "positioning": ("open_interest", "funding", "mark_index", "basis"),
+            "open_interest": ("open_interest",),
+            "funding": ("funding",),
+            "mark_index": ("mark_index",),
+            "basis": ("basis",),
+        }.get(channel_type, ())
+        if part_names and all(
+            (channel_type, symbol, gap_started_at, part) in handled
+            for part in part_names
+        ):
+            continue
         logger.info("recovering gap on %s/%s from %s to %s", channel_type, symbol, gap_started_at, gap_end)
+
+        async def run_part(
+            part: str,
+            label: str,
+            operation: Callable[[], Awaitable[RecoveryResult]],
+        ) -> None:
+            key = (channel_type, symbol, gap_started_at, part)
+            if key in handled:
+                return
+            result = await operation()
+            results.append(result)
+            logger.info("recovered %s: %d rows, resolution=%s", label, result.recovered_count, result.resolution)
+            if not result.errors:
+                handled.add(key)
 
         try:
             if channel_type == "positioning":
                 # Positioning is composite; recover OI/funding/mark/index/basis sub-channels
-                result_oi = await recover_oi_gap(client, writer, symbol, gap_started_at, gap_end)
-                results.append(result_oi)
-                logger.info("recovered OI: %d rows, resolution=%s", result_oi.recovered_count, result_oi.resolution)
-
-                result_funding = await recover_funding_gap(client, writer, symbol, gap_started_at, gap_end)
-                results.append(result_funding)
-                logger.info("recovered funding: %d rows, resolution=%s", result_funding.recovered_count, result_funding.resolution)
-
-                result_mark_index = await recover_mark_index_gap(client, writer, symbol, gap_started_at, gap_end)
-                results.append(result_mark_index)
-                logger.info("recovered mark/index: %d rows, resolution=%s", result_mark_index.recovered_count, result_mark_index.resolution)
-
-                result_basis = await recover_basis_gap(client, writer, symbol, gap_started_at, gap_end)
-                results.append(result_basis)
-                logger.info("recovered basis: %d rows, resolution=%s", result_basis.recovered_count, result_basis.resolution)
+                await run_part(
+                    "open_interest", "OI",
+                    lambda: recover_oi_gap(client, writer, symbol, gap_started_at, gap_end),
+                )
+                await run_part(
+                    "funding", "funding",
+                    lambda: recover_funding_gap(client, writer, symbol, gap_started_at, gap_end),
+                )
+                await run_part(
+                    "mark_index", "mark/index",
+                    lambda: recover_mark_index_gap(client, writer, symbol, gap_started_at, gap_end),
+                )
+                await run_part(
+                    "basis", "basis",
+                    lambda: recover_basis_gap(client, writer, symbol, gap_started_at, gap_end),
+                )
 
             elif channel_type == "open_interest":
-                result = await recover_oi_gap(client, writer, symbol, gap_started_at, gap_end)
-                results.append(result)
-                logger.info("recovered OI: %d rows, resolution=%s", result.recovered_count, result.resolution)
+                await run_part(
+                    "open_interest", "OI",
+                    lambda: recover_oi_gap(client, writer, symbol, gap_started_at, gap_end),
+                )
 
             elif channel_type == "funding":
-                result = await recover_funding_gap(client, writer, symbol, gap_started_at, gap_end)
-                results.append(result)
-                logger.info("recovered funding: %d rows, resolution=%s", result.recovered_count, result.resolution)
+                await run_part(
+                    "funding", "funding",
+                    lambda: recover_funding_gap(client, writer, symbol, gap_started_at, gap_end),
+                )
 
             elif channel_type == "mark_index":
-                result = await recover_mark_index_gap(client, writer, symbol, gap_started_at, gap_end)
-                results.append(result)
-                logger.info("recovered mark/index: %d rows, resolution=%s", result.recovered_count, result.resolution)
+                await run_part(
+                    "mark_index", "mark/index",
+                    lambda: recover_mark_index_gap(client, writer, symbol, gap_started_at, gap_end),
+                )
 
             elif channel_type == "basis":
-                result = await recover_basis_gap(client, writer, symbol, gap_started_at, gap_end)
-                results.append(result)
-                logger.info("recovered basis: %d rows, resolution=%s", result.recovered_count, result.resolution)
+                await run_part(
+                    "basis", "basis",
+                    lambda: recover_basis_gap(client, writer, symbol, gap_started_at, gap_end),
+                )
 
         except Exception as exc:
             logger.exception("recovery failed for %s/%s: %s", channel_type, symbol, exc)
