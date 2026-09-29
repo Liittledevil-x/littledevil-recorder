@@ -308,6 +308,16 @@ async def recover_and_run(
         asyncio.create_task(run_liquidation_stream(on_liquidation, stop_event=stop_event)),
         asyncio.create_task(publish_heartbeats(recorder_instance_id())),
     ]
+    current_task = asyncio.current_task()
+    active_background = sum(
+        task is not current_task and not task.done()
+        for task in asyncio.all_tasks()
+    )
+    logger.info(
+        "task census before shutdown: background=%d stream_supervisor_tasks=%d",
+        active_background,
+        stream_supervisor.active_task_count,
+    )
 
     try:
         await stop_event.wait()
@@ -316,6 +326,15 @@ async def recover_and_run(
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         await stream_supervisor.stop()
+        active_background = sum(
+            task is not asyncio.current_task() and not task.done()
+            for task in asyncio.all_tasks()
+        )
+        logger.info(
+            "task census after shutdown: background=%d stream_supervisor_tasks=%d",
+            active_background,
+            stream_supervisor.active_task_count,
+        )
         _flush_all_logging_failures(writer)
         health.mark_process_stopped()
         if not await health.flush():
@@ -353,6 +372,10 @@ class _StreamSupervisor:
         self._running: dict[str, list[str]] = {"trades": [], "depth": []}
         self._task: dict[str, asyncio.Task | None] = {"trades": None, "depth": None}
         self._task_stop: dict[str, asyncio.Event | None] = {"trades": None, "depth": None}
+
+    @property
+    def active_task_count(self) -> int:
+        return sum(task is not None and not task.done() for task in self._task.values())
 
     async def reconcile(self) -> None:
         if self._outer_stop.is_set():
