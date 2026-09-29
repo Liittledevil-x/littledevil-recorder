@@ -81,23 +81,23 @@ async def recover_oi_gap(
             "limit": 500,
         }
 
-        async with client.get(OI_HISTORY_URL, params=params, timeout=httpx.Timeout(10)) as resp:
-            if resp.status != 200:
-                errors.append(f"HTTP {resp.status} from OI history")
-            else:
-                rows = await resp.json()
-                for row in rows:
-                    ts_exchange = datetime.fromtimestamp(int(row["timestamp"]) / 1000, tz=UTC)
-                    ts_received = datetime.now(UTC)
+        resp = await client.get(OI_HISTORY_URL, params=params, timeout=httpx.Timeout(10))
+        if resp.status_code != 200:
+            errors.append(f"HTTP {resp.status_code} from OI history")
+        else:
+            rows = resp.json()
+            for row in rows:
+                ts_exchange = datetime.fromtimestamp(int(row["timestamp"]) / 1000, tz=UTC)
+                ts_received = datetime.now(UTC)
 
-                    writer.write_open_interest(
-                        symbol,
-                        ts_exchange=ts_exchange,
-                        ts_received=ts_received,
-                        open_interest=float(row["sumOpenInterest"]),
-                        source="binance_usdm_recovered_5m",
-                    )
-                    recovered += 1
+                writer.write_open_interest(
+                    symbol,
+                    ts_exchange=ts_exchange,
+                    ts_received=ts_received,
+                    open_interest=float(row["sumOpenInterest"]),
+                    source="binance_usdm_recovered_5m",
+                )
+                recovered += 1
     except Exception as exc:
         errors.append(f"OI recovery error: {exc!r}")
 
@@ -134,32 +134,32 @@ async def recover_funding_gap(
             "limit": 1000,
         }
 
-        async with client.get(FUNDING_RATE_URL, params=params, timeout=httpx.Timeout(10)) as resp:
-            if resp.status != 200:
-                errors.append(f"HTTP {resp.status} from funding history")
-            else:
-                rows = await resp.json()
-                for row in rows:
-                    funding_time = datetime.fromtimestamp(int(row["fundingTime"]) / 1000, tz=UTC)
+        resp = await client.get(FUNDING_RATE_URL, params=params, timeout=httpx.Timeout(10))
+        if resp.status_code != 200:
+            errors.append(f"HTTP {resp.status_code} from funding history")
+        else:
+            rows = resp.json()
+            for row in rows:
+                funding_time = datetime.fromtimestamp(int(row["fundingTime"]) / 1000, tz=UTC)
 
-                    # Deduplicate by fundingTime
-                    if funding_time in seen_times:
-                        continue
-                    seen_times.add(funding_time)
+                # Deduplicate by fundingTime
+                if funding_time in seen_times:
+                    continue
+                seen_times.add(funding_time)
 
-                    ts_received = datetime.now(UTC)
+                ts_received = datetime.now(UTC)
 
-                    writer.write_funding(
-                        symbol,
-                        ts_exchange=funding_time,
-                        ts_received=ts_received,
-                        funding_rate=float(row["fundingRate"]),
-                        funding_time=funding_time,
-                        mark_price=float(row["markPrice"]),
-                        rate_type=row.get("rateType", "unknown"),
-                        source="binance_usdm_recovered_history",
-                    )
-                    recovered += 1
+                writer.write_funding(
+                    symbol,
+                    ts_exchange=funding_time,
+                    ts_received=ts_received,
+                    funding_rate=float(row["fundingRate"]),
+                    funding_time=funding_time,
+                    mark_price=float(row["markPrice"]),
+                    rate_type=row.get("rateType", "unknown"),
+                    source="binance_usdm_recovered_history",
+                )
+                recovered += 1
     except Exception as exc:
         errors.append(f"Funding recovery error: {exc!r}")
 
@@ -197,52 +197,52 @@ async def recover_mark_index_gap(
         }
 
         # Recover mark price klines
-        async with client.get(MARK_KLINES_URL, params=params, timeout=httpx.Timeout(10)) as resp:
-            if resp.status == 200:
-                rows = await resp.json()
-                for row in rows:
-                    ts_exchange = datetime.fromtimestamp(int(row[0]) / 1000, tz=UTC)
-                    ts_received = datetime.now(UTC)
+        resp = await client.get(MARK_KLINES_URL, params=params, timeout=httpx.Timeout(10))
+        if resp.status_code == 200:
+            rows = resp.json()
+            for row in rows:
+                ts_exchange = datetime.fromtimestamp(int(row[0]) / 1000, tz=UTC)
+                ts_received = datetime.now(UTC)
 
-                    writer.write_mark_index(
-                        symbol,
-                        ts_exchange=ts_exchange,
-                        ts_received=ts_received,
-                        mark_price=float(row[4]),  # close price
-                        index_price=0.0,  # placeholder; will be overwritten by index query
-                        estimated_settle_price=0.0,
-                        last_funding_rate=0.0,
-                        interest_rate=0.0,
-                        next_funding_time=datetime.now(UTC),
-                        source=f"binance_usdm_recovered_markKlines_{interval}",
-                    )
-                    recovered_mark += 1
-            else:
-                errors.append(f"HTTP {resp.status} from mark klines")
+                writer.write_mark_index(
+                    symbol,
+                    ts_exchange=ts_exchange,
+                    ts_received=ts_received,
+                    mark_price=float(row[4]),  # close price
+                    index_price=0.0,  # placeholder; will be overwritten by index query
+                    estimated_settle_price=0.0,
+                    last_funding_rate=0.0,
+                    interest_rate=0.0,
+                    next_funding_time=datetime.now(UTC),
+                    source=f"binance_usdm_recovered_markKlines_{interval}",
+                )
+                recovered_mark += 1
+        else:
+            errors.append(f"HTTP {resp.status_code} from mark klines")
 
         # Recover index price klines
-        async with client.get(INDEX_KLINES_URL, params=params, timeout=httpx.Timeout(10)) as resp:
-            if resp.status == 200:
-                rows = await resp.json()
-                for row in rows:
-                    ts_exchange = datetime.fromtimestamp(int(row[0]) / 1000, tz=UTC)
-                    ts_received = datetime.now(UTC)
+        resp = await client.get(INDEX_KLINES_URL, params=params, timeout=httpx.Timeout(10))
+        if resp.status_code == 200:
+            rows = resp.json()
+            for row in rows:
+                ts_exchange = datetime.fromtimestamp(int(row[0]) / 1000, tz=UTC)
+                ts_received = datetime.now(UTC)
 
-                    writer.write_mark_index(
-                        symbol,
-                        ts_exchange=ts_exchange,
-                        ts_received=ts_received,
-                        mark_price=0.0,  # placeholder
-                        index_price=float(row[4]),  # close price
-                        estimated_settle_price=0.0,
-                        last_funding_rate=0.0,
-                        interest_rate=0.0,
-                        next_funding_time=datetime.now(UTC),
-                        source=f"binance_usdm_recovered_indexKlines_{interval}",
-                    )
-                    recovered_index += 1
-            else:
-                errors.append(f"HTTP {resp.status} from index klines")
+                writer.write_mark_index(
+                    symbol,
+                    ts_exchange=ts_exchange,
+                    ts_received=ts_received,
+                    mark_price=0.0,  # placeholder
+                    index_price=float(row[4]),  # close price
+                    estimated_settle_price=0.0,
+                    last_funding_rate=0.0,
+                    interest_rate=0.0,
+                    next_funding_time=datetime.now(UTC),
+                    source=f"binance_usdm_recovered_indexKlines_{interval}",
+                )
+                recovered_index += 1
+        else:
+            errors.append(f"HTTP {resp.status_code} from index klines")
     except Exception as exc:
         errors.append(f"Mark/index recovery error: {exc!r}")
 
@@ -279,28 +279,28 @@ async def recover_basis_gap(
             "limit": 500,
         }
 
-        async with client.get(BASIS_HISTORY_URL, params=params, timeout=httpx.Timeout(10)) as resp:
-            if resp.status != 200:
-                errors.append(f"HTTP {resp.status} from basis history")
-            else:
-                rows = await resp.json()
-                for row in rows:
-                    ts_exchange = datetime.fromtimestamp(int(row["timestamp"]) / 1000, tz=UTC)
-                    ts_received = datetime.now(UTC)
+        resp = await client.get(BASIS_HISTORY_URL, params=params, timeout=httpx.Timeout(10))
+        if resp.status_code != 200:
+            errors.append(f"HTTP {resp.status_code} from basis history")
+        else:
+            rows = resp.json()
+            for row in rows:
+                ts_exchange = datetime.fromtimestamp(int(row["timestamp"]) / 1000, tz=UTC)
+                ts_received = datetime.now(UTC)
 
-                    writer.write_basis(
-                        symbol,
-                        ts_exchange=ts_exchange,
-                        ts_received=ts_received,
-                        index_price=float(row["indexPrice"]),
-                        futures_price=float(row["futuresPrice"]),
-                        basis_rate=float(row["basisRate"]),
-                        basis=float(row["basis"]),
-                        annualized_basis_rate=float(row["annualizedBasisRate"]),
-                        contract_type=row["contractType"],
-                        source=f"binance_usdm_recovered_basis_{period}",
-                    )
-                    recovered += 1
+                writer.write_basis(
+                    symbol,
+                    ts_exchange=ts_exchange,
+                    ts_received=ts_received,
+                    index_price=float(row["indexPrice"]),
+                    futures_price=float(row["futuresPrice"]),
+                    basis_rate=float(row["basisRate"]),
+                    basis=float(row["basis"]),
+                    annualized_basis_rate=float(row["annualizedBasisRate"]),
+                    contract_type=row["contractType"],
+                    source=f"binance_usdm_recovered_basis_{period}",
+                )
+                recovered += 1
     except Exception as exc:
         errors.append(f"Basis recovery error: {exc!r}")
 

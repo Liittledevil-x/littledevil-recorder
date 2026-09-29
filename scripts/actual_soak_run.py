@@ -190,6 +190,9 @@ class ReconnectLogCounter(logging.Handler):
     def __init__(self, metrics: Metrics) -> None:
         super().__init__(logging.WARNING)
         self.metrics = metrics
+        self.recovery_errors = 0
+        self.poll_errors = 0
+        self.rejected_events = 0
 
     def emit(self, record: logging.LogRecord) -> None:
         message = record.getMessage().lower()
@@ -197,6 +200,11 @@ class ReconnectLogCounter(logging.Handler):
             self.metrics.reconnects += 1
         if "stream task failed" in message:
             self.metrics.processing_errors += 1
+        if "recovery for " in message and " had errors:" in message:
+            self.recovery_errors += 1
+        if "failed to poll" in message:
+            self.poll_errors += 1
+            self.rejected_events += 1
 
 
 class RestObserver:
@@ -210,52 +218,19 @@ class RestObserver:
         original_httpx_get = self._httpx_get
         original_aiohttp_request = self._aiohttp_request
 
-        class ObservedHTTPXRequest:
-            def __init__(self, request, url_text: str, identity: str) -> None:
-                self.request = request
-                self.url_text = url_text
-                self.identity = identity
-
-            def _record(self, response) -> None:
-                metrics.rest_request(
-                    self.url_text, status=response.status_code, identity=self.identity
-                )
-
-            def __await__(self):
-                async def await_response():
-                    try:
-                        response = await self.request
-                    except Exception:
-                        metrics.rest_request(
-                            self.url_text, status=None, failed=True, identity=self.identity
-                        )
-                        raise
-                    self._record(response)
-                    return response
-                return await_response().__await__()
-
-            async def __aenter__(self):
-                try:
-                    response = await self.request.__aenter__()
-                except Exception:
-                    metrics.rest_request(
-                        self.url_text, status=None, failed=True, identity=self.identity
-                    )
-                    raise
-                self._record(response)
-                return response
-
-            async def __aexit__(self, *exc_info):
-                return await self.request.__aexit__(*exc_info)
-
-        def observed_httpx_get(client, url, *args, **kwargs):
+        async def observed_httpx_get(client, url, *args, **kwargs):
             url_text = str(url)
-            request = original_httpx_get(client, url, *args, **kwargs)
             params = kwargs.get("params")
             identity = url_text
             if params:
                 identity += "?" + json.dumps(params, sort_keys=True, default=str)
-            return ObservedHTTPXRequest(request, url_text, identity)
+            try:
+                response = await original_httpx_get(client, url, *args, **kwargs)
+            except Exception:
+                metrics.rest_request(url_text, status=None, failed=True, identity=identity)
+                raise
+            metrics.rest_request(url_text, status=response.status_code, identity=identity)
+            return response
 
         async def observed_aiohttp_request(session, method, url, *args, **kwargs):
             url_text = str(url)
@@ -330,7 +305,7 @@ def capacity_entry(rows: int, raw_bytes: int, elapsed_seconds: float) -> dict:
             "extrapolated_GB_per_day": None,
         }
     return {
-        "status": "SAMPLED",
+        "status": "MEASURED",
         "observed_rows": rows,
         "raw_bytes": raw_bytes,
         "bytes_per_event": {
@@ -507,8 +482,12 @@ async def run_soak(args: argparse.Namespace) -> dict:
         "rest_request_attempts": metrics.rest_attempts,
         "rest_retry_count": metrics.rest_retries,
         "http_429_count": metrics.http_429,
-        "duplicate_or_rejected_event_count": metrics.duplicates,
+        "duplicate_event_count": metrics.duplicates,
+        "rejected_event_count": reconnect_counter.rejected_events,
+        "duplicate_or_rejected_event_count": metrics.duplicates + reconnect_counter.rejected_events,
         "processing_error_count": metrics.processing_errors,
+        "poll_error_count": reconnect_counter.poll_errors,
+        "recovery_error_count": reconnect_counter.recovery_errors,
         "unrecoverable_gap_count": unrecoverable_gaps,
         "data_health": health,
         "peak_rss_mb": metrics.peak_rss_mb,
@@ -527,6 +506,7 @@ async def run_soak(args: argparse.Namespace) -> dict:
         "status": "PASS" if (
             elapsed >= args.duration_seconds and failure is None
             and not mismatched_counters and metrics.processing_errors == 0
+            and reconnect_counter.recovery_errors == 0
         ) else "FAIL",
     }
     return report
