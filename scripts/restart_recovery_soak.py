@@ -457,7 +457,7 @@ def run(args: argparse.Namespace) -> dict:
         "post_restart_live_trades_and_depth_persisted": all(post_live.get(channel, 0) > 0 for channel in ("trades", "depth")),
         "data_health_recovered_for_live_channels": health_post_ok,
         "liquidation_gap_explicitly_unrecoverable": liquidations_explicit,
-        "no_stream_supervisor_or_background_tasks_left": all(
+        "no_stream_supervisor_or_background_tasks_left": (
             stop_task_counts_are_clean(first.get("task_census", {}))
             and stop_task_counts_are_clean(second.get("task_census", {}))
         ),
