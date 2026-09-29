@@ -159,11 +159,13 @@ def start_recorder(root: Path, log_path: Path, symbols: list[str]) -> tuple[subp
     return proc, log_handle
 
 
-def stop_recorder(proc: subprocess.Popen, log_handle, label: str) -> tuple[datetime, datetime, int]:
+def stop_recorder(
+    proc: subprocess.Popen, log_handle, label: str, *, timeout_seconds: float = 90,
+) -> tuple[datetime, datetime, int]:
     stop_requested_at = now()
     proc.send_signal(signal.SIGTERM)
     try:
-        return_code = proc.wait(timeout=20)
+        return_code = proc.wait(timeout=timeout_seconds)
     except subprocess.TimeoutExpired:
         proc.kill()
         return_code = proc.wait(timeout=5)
@@ -322,8 +324,10 @@ def run(args: argparse.Namespace) -> dict:
         # Second production process, using the exact same persisted data root.
         second_log = log_dir / "recorder_after_restart.log"
         second_proc, second_handle = start_recorder(root, second_log, symbols)
-        report["second_process_pid"] = second_proc.pid
-        report["second_process_start_timestamp"] = iso(restart_at)
+        report["second_process"] = {
+            "pid": second_proc.pid,
+            "start_timestamp": iso(restart_at),
+        }
         try:
             def post_restart_observation():
                 snapshot = parquet_snapshot(root, restart_at)
@@ -392,7 +396,7 @@ def run(args: argparse.Namespace) -> dict:
             if second_proc.poll() is None:
                 second_proc.send_signal(signal.SIGTERM)
                 try:
-                    second_proc.wait(timeout=20)
+                    second_proc.wait(timeout=90)
                 except subprocess.TimeoutExpired:
                     second_proc.kill()
                     second_proc.wait(timeout=5)
@@ -402,7 +406,7 @@ def run(args: argparse.Namespace) -> dict:
         if first_proc.poll() is None:
             first_proc.send_signal(signal.SIGTERM)
             try:
-                first_proc.wait(timeout=20)
+                first_proc.wait(timeout=90)
             except subprocess.TimeoutExpired:
                 first_proc.kill()
                 first_proc.wait(timeout=5)
