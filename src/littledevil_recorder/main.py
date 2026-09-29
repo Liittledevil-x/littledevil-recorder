@@ -144,7 +144,8 @@ async def recover_and_run(
 
     handled_recovery_parts: set[tuple[str, str, datetime, str]] = set()
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    client = httpx.AsyncClient(timeout=10.0)
+    try:
         today = datetime.now(UTC).date()
         for symbol in trade_symbols:
             plan = last_recorded_trade(data_root(), symbol, today)
@@ -155,6 +156,11 @@ async def recover_and_run(
                 if recovered:
                     logger.info("restart recovery: %s recovered %d trades", symbol, recovered)
         _flush_all_logging_failures(writer)
+    except Exception:
+        await client.aclose()
+        await conn.close()
+        writer.close()
+        raise
 
     async def on_trade(trade: dict) -> None:
         writer.write_trade(
@@ -315,6 +321,7 @@ async def recover_and_run(
         if not await health.flush():
             logger.error("final data_health flush failed; pending=%d", health.pending_channels)
         writer.close()
+        await client.aclose()
         await conn.close()
 
 
