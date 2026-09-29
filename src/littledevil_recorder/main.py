@@ -306,6 +306,7 @@ async def recover_and_run(
         await asyncio.gather(*tasks, return_exceptions=True)
         await stream_supervisor.stop()
         _flush_all_logging_failures(writer)
+        health.mark_process_stopped()
         if not await health.flush():
             logger.error("final data_health flush failed; pending=%d", health.pending_channels)
         writer.close()

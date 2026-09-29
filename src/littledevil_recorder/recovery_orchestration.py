@@ -11,6 +11,7 @@ during polling.
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from datetime import UTC, datetime
 
 import httpx
@@ -65,7 +66,14 @@ async def orchestrate_recovery_from_gaps(
     if not rows:
         return results
 
-    for channel, last_message_at, gap_started_at, status in rows:
+    for row in rows:
+        if isinstance(row, Mapping):
+            channel = row["channel"]
+            last_message_at = row["last_message_at"]
+            gap_started_at = row["gap_started_at"]
+            status = row["status"]
+        else:
+            channel, last_message_at, gap_started_at, status = row
         # Parse channel name: binance_{channel_type}_{symbol}
         # Examples: binance_positioning_BTCUSDT, binance_liquidation_ETHUSDT
         parts = channel.split("_", 2)

@@ -69,6 +69,20 @@ class DataHealthTracker:
                 state.status = new_status
                 self._dirty.add(state.channel)
 
+    def mark_process_stopped(self) -> None:
+        """Persist an explicit gap when this Recorder process shuts down.
+
+        A stopped process cannot keep sweeping elapsed time. Marking the
+        channels stale before the final flush prevents their last persisted
+        status from falsely remaining ``ok`` throughout a clean restart gap.
+        """
+        for state in self._channels.values():
+            if state.gap_started_at is None:
+                state.gap_started_at = state.last_message_at
+            if state.status == "ok":
+                state.status = "stale"
+            self._dirty.add(state.channel)
+
     async def flush(self) -> bool:
         """Best-effort one-statement upsert of all currently dirty channels.
 
