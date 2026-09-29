@@ -188,16 +188,17 @@ async def recover_mark_index_gap(
     recovered_index = 0
 
     try:
-        params = {
-            "pair": symbol,
+        common_params = {
             "interval": interval,
             "startTime": int(gap_start.timestamp() * 1000),
             "endTime": int(gap_end.timestamp() * 1000),
             "limit": 1500,
         }
+        mark_params = {"symbol": symbol, **common_params}
+        index_params = {"pair": symbol, **common_params}
 
         # Recover mark price klines
-        resp = await client.get(MARK_KLINES_URL, params=params, timeout=httpx.Timeout(10))
+        resp = await client.get(MARK_KLINES_URL, params=mark_params, timeout=httpx.Timeout(10))
         if resp.status_code == 200:
             rows = resp.json()
             for row in rows:
@@ -221,7 +222,7 @@ async def recover_mark_index_gap(
             errors.append(f"HTTP {resp.status_code} from mark klines")
 
         # Recover index price klines
-        resp = await client.get(INDEX_KLINES_URL, params=params, timeout=httpx.Timeout(10))
+        resp = await client.get(INDEX_KLINES_URL, params=index_params, timeout=httpx.Timeout(10))
         if resp.status_code == 200:
             rows = resp.json()
             for row in rows:
