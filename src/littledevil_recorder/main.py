@@ -25,6 +25,7 @@ from littledevil_recorder.aggtrade import run_aggtrade_stream
 from littledevil_recorder.data_health import DataHealthTracker
 from littledevil_recorder.db import connect
 from littledevil_recorder.depth import run_depth_stream
+from littledevil_recorder.heartbeat import publish_heartbeats, recorder_instance_id
 from littledevil_recorder.liquidation import run_liquidation_stream
 from littledevil_recorder.local_manifest import (
     record_compaction_failure,
@@ -294,6 +295,7 @@ async def recover_and_run(
             subscriptions, writer, stop_event=stop_event, on_symbol_polled=on_positioning_polled,
         )),
         asyncio.create_task(run_liquidation_stream(on_liquidation, stop_event=stop_event)),
+        asyncio.create_task(publish_heartbeats(recorder_instance_id())),
     ]
 
     try:

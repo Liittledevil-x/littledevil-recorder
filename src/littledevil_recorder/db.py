@@ -21,3 +21,11 @@ def database_url() -> str:
 
 async def connect() -> psycopg.AsyncConnection:
     return await psycopg.AsyncConnection.connect(database_url(), row_factory=dict_row, autocommit=True)
+
+
+def connect_sync() -> psycopg.Connection:
+    """A separate sync connection for WorkerHeartbeatRepository, which issues
+    blocking cursor().execute()/commit() calls incompatible with the async
+    connection above. Callers run its use off the event loop
+    (asyncio.to_thread), same as littledevil-api's own heartbeat publisher."""
+    return psycopg.Connection.connect(database_url(), autocommit=True)

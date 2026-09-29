@@ -342,7 +342,7 @@ test = [
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9" },
     { name = "httpx", specifier = ">=0.27" },
-    { name = "littledevil-shared", git = "https://github.com/Liittledevil-x/littledevil-shared.git?rev=v0.1.0" },
+    { name = "littledevil-shared", git = "https://github.com/Liittledevil-x/littledevil-shared.git?rev=v0.5.1" },
     { name = "psutil", specifier = ">=5.9" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "pyarrow", specifier = ">=17.0" },
@@ -355,8 +355,8 @@ provides-extras = ["test"]
 
 [[package]]
 name = "littledevil-shared"
-version = "0.1.0"
-source = { git = "https://github.com/Liittledevil-x/littledevil-shared.git?rev=v0.1.0#f3527cfad88cd120f8208d8b700761f57ce6c55c" }
+version = "0.5.0"
+source = { git = "https://github.com/Liittledevil-x/littledevil-shared.git?rev=v0.5.1#917d2881390d89d8861637430a8bd5f5a1b206de" }
 dependencies = [
     { name = "psycopg", extra = ["binary"] },
 ]
