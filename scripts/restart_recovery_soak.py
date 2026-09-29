@@ -57,6 +57,7 @@ def parquet_snapshot(root: Path, restart_at: datetime | None = None) -> dict:
     post_restart_live_rows = {}
     provenance = {}
     all_paths = []
+    recovered_trade_rows = 0
     for channel in CHANNELS:
         paths = sorted(root.glob(f"{channel}/**/*.parquet"))
         rows = 0
@@ -65,7 +66,6 @@ def parquet_snapshot(root: Path, restart_at: datetime | None = None) -> dict:
         newest_path = None
         live_rows = 0
         source_counts: dict[str, int] = {}
-        recovered_trade_rows = 0
         trade_rows = []
         for path in paths:
             try:
@@ -307,7 +307,7 @@ def run(args: argparse.Namespace) -> dict:
         report["first_process"]["persisted_after_clean_stop"] = parquet_snapshot(root)
         health_after_stop = read_data_health(database_url)
         report["data_health_after_shutdown"] = health_after_stop
-        report["process_alive_after_first_stop"] = first_proc.poll() is None
+        report["first_process"]["process_alive_after_first_stop"] = first_proc.poll() is None
 
         gap_target = first_stop + timedelta(seconds=args.gap_seconds)
         while now() < gap_target:
@@ -345,7 +345,7 @@ def run(args: argparse.Namespace) -> dict:
                 )
                 health_ok = all(
                     health.get(f"binance_{channel}_{symbol}", {}).get("status") == "ok"
-                    for channel in ("trades", "depth") for symbol in symbols
+                    for channel in ("trades", "depth", "positioning") for symbol in symbols
                 )
                 elapsed = (now() - restart_at).total_seconds()
                 if elapsed >= args.second_run_min_seconds and desired_ok and streams_subscribed and live_market_data and health_ok:
